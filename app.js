@@ -1,16 +1,10 @@
 'use strict';
 
 // ===================== Configuração =====================
-// Cole sua chave do Google Maps JavaScript API aqui. Se ficar vazia, o site
-// usa automaticamente Leaflet + OpenStreetMap como mapa (sem precisar de chave).
-const MAPS_API_KEY = "";
-
 // Cole a URL de implantação (/exec) do Apps Script (apps-script/Code.gs) aqui.
 // Enquanto vazia, os cadastros ficam salvos no localStorage do navegador
 // (modo teste) e não são compartilhados entre dispositivos.
 const SHEETS_API_URL = "";
-
-window.MAPS_API_KEY = MAPS_API_KEY;
 
 const DEFAULT_CENTER = { lat: -9.3891, lng: -40.5030 }; // Petrolina-PE
 const LOCAL_STORAGE_KEY = 'rti_catsertao_points';
@@ -68,54 +62,13 @@ function normalizePoint(raw) {
 
 // ===================== Geocodificação reversa =====================
 function reverseGeocode(lat, lng, cb) {
-  if (MAPS_API_KEY) {
-    fetch('https://maps.googleapis.com/maps/api/geocode/json?latlng=' + lat + ',' + lng + '&key=' + encodeURIComponent(MAPS_API_KEY))
-      .then(function (r) { return r.json(); })
-      .then(function (data) {
-        cb((data.results && data.results[0] && data.results[0].formatted_address) || 'Endereço não encontrado');
-      })
-      .catch(function () { cb('Endereço indisponível'); });
-  } else {
-    fetch('https://nominatim.openstreetmap.org/reverse?format=json&lat=' + lat + '&lon=' + lng + '&zoom=18&addressdetails=1')
-      .then(function (r) { return r.json(); })
-      .then(function (data) { cb(data.display_name || 'Endereço não encontrado'); })
-      .catch(function () { cb('Endereço indisponível'); });
-  }
+  fetch('https://nominatim.openstreetmap.org/reverse?format=json&lat=' + lat + '&lon=' + lng + '&zoom=18&addressdetails=1')
+    .then(function (r) { return r.json(); })
+    .then(function (data) { cb(data.display_name || 'Endereço não encontrado'); })
+    .catch(function () { cb('Endereço indisponível'); });
 }
 
-// ===================== Mapas: Google Maps =====================
-function initGoogleMap() {
-  const map = new google.maps.Map(document.getElementById('map'), {
-    center: DEFAULT_CENTER, zoom: 14,
-    mapTypeControl: false, streetViewControl: false, fullscreenControl: false
-  });
-
-  mapAdapter = {
-    setCenter: function (lat, lng, zoom) {
-      map.setCenter({ lat: lat, lng: lng });
-      if (zoom) map.setZoom(zoom);
-    },
-    addMarker: function (point) {
-      const marker = new google.maps.Marker({
-        position: { lat: point.lat, lng: point.lng },
-        map: map,
-        icon: {
-          path: google.maps.SymbolPath.CIRCLE,
-          fillColor: '#C1121F', fillOpacity: 1,
-          strokeColor: '#ffffff', strokeWeight: 2, scale: 9
-        }
-      });
-      const info = new google.maps.InfoWindow({ content: buildPopupHtml(point) });
-      marker.addListener('click', function () { info.open(map, marker); });
-      return marker;
-    }
-  };
-
-  startApp();
-}
-window.initGoogleMap = initGoogleMap;
-
-// ===================== Mapas: Leaflet (OpenStreetMap) =====================
+// ===================== Mapa: Leaflet (OpenStreetMap) =====================
 function initLeafletMap() {
   const map = L.map('map', { zoomControl: true }).setView([DEFAULT_CENTER.lat, DEFAULT_CENTER.lng], 14);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {

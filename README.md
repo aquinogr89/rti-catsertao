@@ -10,7 +10,7 @@ Site independente, sem nenhum link de/para o site principal do CAT Sertão.
 ```
 index.html          página única (mapa + modal de cadastro)
 style.css            estilos (paleta extraída do site principal)
-app.js                lógica: mapa, geolocalização, cadastro
+app.js                lógica: mapa (Leaflet + OpenStreetMap), geolocalização, cadastro
 apps-script/Code.gs  backend (Google Apps Script + Planilha Google)
 CAT-SERTAO-SEM-FUNDO.png  logo usado no cabeçalho/rodapé
 ```
@@ -39,19 +39,13 @@ mudanças entrem em vigor na URL publicada.
 
 ## 2. Configurar o front-end
 
-Abra [`app.js`](app.js) e edite as duas constantes no topo do arquivo:
+O mapa usa **Leaflet + OpenStreetMap** — não precisa de chave nem de cartão
+de crédito. Abra [`app.js`](app.js) e edite a constante no topo do arquivo:
 
 ```js
-const MAPS_API_KEY = "";      // chave do Google Maps JavaScript API (opcional)
 const SHEETS_API_URL = "";    // URL /exec do Apps Script (passo 1)
 ```
 
-- **`MAPS_API_KEY` vazia** → o site usa automaticamente **Leaflet + OpenStreetMap**
-  (não precisa de chave nem de cartão de crédito). Para usar o Google Maps,
-  crie uma chave no [Google Cloud Console](https://console.cloud.google.com/)
-  com a *Maps JavaScript API* habilitada e cole aqui. Se também quiser
-  geocodificação reversa pelo Google (endereço mais preciso), habilite também
-  a *Geocoding API* na mesma chave.
 - **`SHEETS_API_URL` vazia** → o site funciona em **modo local**: os
   cadastros ficam salvos apenas no `localStorage` do navegador (não são
   compartilhados entre dispositivos) e um selo **"Modo teste"** aparece no
@@ -86,7 +80,6 @@ rede Wi-Fi, usando o IP da máquina.
 
 - A geolocalização do dispositivo requer HTTPS (GitHub Pages já serve por
   HTTPS) ou `localhost` — em `http://` "normal" o navegador bloqueia a API.
-- A geocodificação reversa usa o Google Geocoding API quando há
-  `MAPS_API_KEY`, ou o Nominatim (OpenStreetMap) como alternativa gratuita —
-  use com moderação, pois o Nominatim tem limite de requisições por segundo
-  para uso público.
+- A geocodificação reversa usa o Nominatim (OpenStreetMap) — use com
+  moderação, pois esse serviço público tem limite de requisições por
+  segundo.
