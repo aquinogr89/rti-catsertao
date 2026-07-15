@@ -1,0 +1,128 @@
+:root{
+  --navy:#14204A; --navy-2:#1B2A5B; --red:#C1121F; --red-hover:#97121A; --gold:#E8B302;
+  --ink:#1C1B19; --muted:#57554F; --muted-2:#6B6A66; --muted-3:#8C8A83;
+  --border:#E5E0D5; --border-2:#D8D1C3; --field-bg:#FBFAF7;
+  --chip-bg:#F4F1EA; --chip-border:#E6E0D4;
+  --warn-bg:#FBF3D6; --warn-border:#F0DFA0; --warn-text:#7a5f00; --note-text:#8a6a00;
+  --green:#1E8E4E; --green-hover:#177a41; --green-dot:#7DE6A5;
+}
+*{ margin:0; padding:0; box-sizing:border-box; }
+.u-hidden{ display:none !important; }
+html, body{ height:100%; }
+body{
+  font-family:'Public Sans', sans-serif; color:var(--ink); background:#FBFAF8;
+  min-height:100vh; display:flex; flex-direction:column; overflow-x:hidden;
+}
+h1,h2,h3{ font-family:'Oswald', sans-serif; }
+img{ display:block; max-width:100%; }
+
+/* ===== Header ===== */
+header.top{ background:var(--navy); color:#fff; padding:12px 16px; flex:0 0 auto; }
+.top-inner{ display:flex; align-items:center; gap:14px; max-width:1180px; margin:0 auto; }
+.top-logo{ width:52px; height:52px; background:#fff; border-radius:10px; display:flex; align-items:center; justify-content:center; flex:0 0 auto; box-shadow:0 2px 8px rgba(0,0,0,.25); }
+.top-logo img{ width:42px; height:42px; object-fit:contain; }
+.top-org{ font-family:'Oswald', sans-serif; font-weight:600; font-size:10.5px; letter-spacing:.16em; color:var(--gold); text-transform:uppercase; }
+.top-title{ font-weight:700; font-size:clamp(15px,4vw,20px); line-height:1.15; margin:2px 0 0; text-transform:uppercase; letter-spacing:.01em; }
+.top-sub{ font-family:'Oswald', sans-serif; font-weight:500; font-size:11px; letter-spacing:.1em; color:#cfd4e6; margin-top:2px; text-transform:uppercase; }
+
+/* ===== Aviso de localização ===== */
+.banner-warn{ background:var(--warn-bg); border-bottom:1px solid var(--warn-border); color:var(--warn-text); flex:0 0 auto; }
+.banner-warn-inner{ padding:7px 16px; font-size:12px; line-height:1.4; display:flex; gap:8px; align-items:center; max-width:1180px; margin:0 auto; }
+.banner-warn .sq{ width:7px; height:7px; border-radius:2px; background:var(--red); flex:0 0 auto; }
+
+/* ===== Mapa (ocupa a maior parte da viewport) ===== */
+main.map-area{ position:relative; flex:1 1 auto; min-height:0; width:100%; }
+#map{ position:absolute; inset:0; width:100%; height:100%; background:#e5e0d5; }
+
+/* Botão flutuante "Cadastrar RTI" */
+.btn-fab{
+  position:absolute; left:50%; bottom:18px; transform:translateX(-50%); z-index:5;
+  font-family:'Oswald', sans-serif; font-weight:600; font-size:14px; letter-spacing:.05em;
+  text-transform:uppercase; color:#fff; background:var(--red); border:none;
+  padding:14px 26px; border-radius:999px; cursor:pointer; box-shadow:0 10px 26px -10px rgba(0,0,0,.5);
+  display:flex; align-items:center; gap:8px; white-space:nowrap;
+}
+.btn-fab:hover{ background:var(--red-hover); }
+.btn-fab:active{ transform:translateX(-50%) scale(.97); }
+
+/* Botão "Atualizar localização" (canto) */
+.btn-locate{
+  position:absolute; right:12px; bottom:18px; z-index:5; width:44px; height:44px;
+  background:#fff; border:1px solid var(--border-2); border-radius:50%; cursor:pointer;
+  display:flex; align-items:center; justify-content:center; box-shadow:0 8px 20px -10px rgba(0,0,0,.4);
+  font-size:18px; color:var(--navy);
+}
+.btn-locate:hover{ border-color:var(--red); color:var(--red); }
+
+/* ===== Popup do marcador (Leaflet) ===== */
+.rti-popup{ font-family:'Public Sans', sans-serif; font-size:13px; line-height:1.5; color:var(--ink); min-width:200px; }
+.rti-popup strong{ font-family:'Oswald', sans-serif; font-size:14px; text-transform:uppercase; letter-spacing:.01em; display:block; margin-bottom:4px; color:var(--navy); }
+.rti-popup .row{ display:flex; gap:6px; margin-top:3px; }
+.rti-popup .label{ color:var(--muted-3); flex:0 0 auto; }
+.rti-popup .chips{ display:flex; gap:6px; flex-wrap:wrap; margin-top:6px; }
+.rti-popup .chip{ font-size:11px; font-weight:600; padding:3px 8px; border-radius:5px; background:var(--chip-bg); border:1px solid var(--chip-border); color:var(--muted); }
+.rti-popup .chip.yes{ background:#E9F7EF; border-color:#BFE8D2; color:var(--green-hover); }
+
+/* ===== Modal de cadastro ===== */
+.modal-overlay{
+  position:fixed; inset:0; background:rgba(20,32,74,.55); z-index:1000;
+  display:flex; align-items:flex-end; justify-content:center;
+}
+.modal-card{
+  width:100%; max-width:480px; max-height:92vh; overflow-y:auto;
+  background:#fff; border-radius:18px 18px 0 0; box-shadow:0 -20px 60px -20px rgba(0,0,0,.5);
+  padding:22px 20px calc(20px + env(safe-area-inset-bottom));
+  display:flex; flex-direction:column; gap:16px;
+}
+@media (min-width: 640px){
+  .modal-overlay{ align-items:center; }
+  .modal-card{ border-radius:18px; max-height:90vh; }
+}
+.modal-head{ display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.modal-head h2{ font-size:19px; text-transform:uppercase; letter-spacing:.01em; color:var(--navy); }
+.modal-close{ background:none; border:none; font-size:22px; line-height:1; color:var(--muted-3); cursor:pointer; padding:4px; }
+.modal-close:hover{ color:var(--red); }
+
+.field{ display:flex; flex-direction:column; gap:6px; font-size:12px; font-weight:600; letter-spacing:.04em; color:var(--muted); text-transform:uppercase; }
+.field input[type=text], .field input[type=number]{
+  font-family:'Public Sans', sans-serif; font-size:15px; font-weight:400; text-transform:none; letter-spacing:normal;
+  padding:12px 14px; border:1px solid var(--border-2); border-radius:10px; background:var(--field-bg); outline:none; color:var(--ink);
+}
+.field input:focus{ border-color:var(--red); background:#fff; }
+.field-error{ font-size:12.5px; color:#9c1c1c; background:#FBEAEA; border:1px solid #F0C7C7; padding:9px 11px; border-radius:9px; }
+
+.loc-box{ background:var(--field-bg); border:1px solid var(--border-2); border-radius:12px; padding:12px 14px; display:flex; flex-direction:column; gap:8px; }
+.loc-box .coords{ font-size:13.5px; color:var(--ink); }
+.loc-box .coords span{ color:var(--muted-3); }
+.btn-outline-navy{
+  display:inline-flex; align-items:center; justify-content:center; gap:8px; font-family:'Oswald', sans-serif; font-weight:600;
+  font-size:12.5px; letter-spacing:.04em; text-transform:uppercase; color:var(--navy); background:#fff;
+  border:1.5px solid var(--navy); padding:9px 14px; border-radius:9px; cursor:pointer; align-self:flex-start;
+}
+.btn-outline-navy:hover{ background:var(--navy); color:#fff; }
+
+.checkbox-row{ display:flex; align-items:center; gap:10px; font-size:14px; font-weight:500; text-transform:none; letter-spacing:normal; color:var(--ink); }
+.checkbox-row input{ width:18px; height:18px; accent-color:var(--red); }
+
+.btn-red{
+  font-family:'Oswald', sans-serif; font-weight:600; font-size:15px; letter-spacing:.06em; text-transform:uppercase;
+  color:#fff; background:var(--red); border:none; padding:14px; border-radius:10px; cursor:pointer;
+}
+.btn-red:hover{ background:var(--red-hover); }
+.btn-red:disabled{ opacity:.6; cursor:not-allowed; }
+
+/* ===== Rodapé ===== */
+footer.bottom{ background:var(--navy); color:#c8cde0; flex:0 0 auto; }
+.bottom-inner{ padding:10px 16px; display:flex; align-items:center; gap:10px; flex-wrap:wrap; font-size:11.5px; max-width:1180px; margin:0 auto; }
+.bottom-inner img{ width:26px; height:26px; object-fit:contain; background:#fff; border-radius:6px; padding:2px; }
+.bottom-text{ line-height:1.4; }
+.bottom-text strong{ color:#fff; font-weight:600; }
+.badge-test{
+  margin-left:auto; font-family:'Oswald', sans-serif; font-weight:600; font-size:10px; letter-spacing:.08em;
+  text-transform:uppercase; color:var(--warn-text); background:var(--gold); padding:4px 9px; border-radius:999px;
+}
+
+@media (max-width: 480px){
+  .btn-fab{ font-size:13px; padding:12px 20px; bottom:14px; }
+  .btn-locate{ width:40px; height:40px; bottom:14px; right:10px; }
+}

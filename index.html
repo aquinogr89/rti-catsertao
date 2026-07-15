@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<title>Cadastro de RTI — CAT Sertão</title>
+<meta name="description" content="Cadastro de Reserva Técnica de Incêndio (RTI) — CAT Sertão, Corpo de Bombeiros Militar de Pernambuco.">
+<meta name="theme-color" content="#14204A">
+<link rel="icon" type="image/png" href="CAT-SERTAO-SEM-FUNDO.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Public+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<!-- Fallback: Leaflet + OpenStreetMap, usado quando MAPS_API_KEY estiver vazia -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+</head>
+<body>
+
+<header class="top">
+  <div class="top-inner">
+    <div class="top-logo"><img src="CAT-SERTAO-SEM-FUNDO.png" alt="Brasão do CAT Sertão"></div>
+    <div style="min-width:0;">
+      <div class="top-org">CAT Sertão · CBMPE</div>
+      <h1 class="top-title">Cadastro de RTI</h1>
+      <div class="top-sub">Reserva Técnica de Incêndio</div>
+    </div>
+  </div>
+</header>
+
+<div id="geo-warning" class="banner-warn u-hidden">
+  <div class="banner-warn-inner">
+    <span class="sq"></span>
+    <span>Não foi possível obter sua localização automaticamente. O mapa foi centralizado em Petrolina-PE.</span>
+  </div>
+</div>
+
+<main class="map-area">
+  <div id="map"></div>
+
+  <button id="btn-locate" class="btn-locate" type="button" title="Centralizar na minha localização">📍</button>
+  <button id="btn-cadastrar" class="btn-fab" type="button">+ Cadastrar RTI</button>
+</main>
+
+<footer class="bottom">
+  <div class="bottom-inner">
+    <img src="CAT-SERTAO-SEM-FUNDO.png" alt="">
+    <div class="bottom-text">
+      <strong>Site em desenvolvimento</strong> — desenvolvido pelo CAT Sertão – Centro de Atividades Técnicas do Sertão
+    </div>
+    <span id="badge-test" class="badge-test u-hidden">Modo teste</span>
+  </div>
+</footer>
+
+<!-- ===== Modal de cadastro ===== -->
+<div id="modal-overlay" class="modal-overlay u-hidden">
+  <div class="modal-card">
+    <div class="modal-head">
+      <h2>Cadastrar RTI</h2>
+      <button id="modal-close" class="modal-close" type="button" aria-label="Fechar">&times;</button>
+    </div>
+
+    <form id="rti-form" style="display:flex; flex-direction:column; gap:16px;">
+
+      <div class="field">
+        Localização do dispositivo
+        <div class="loc-box">
+          <div class="coords"><span>Lat:</span> <span id="loc-lat">—</span> &nbsp; <span>Long:</span> <span id="loc-lng">—</span></div>
+          <div class="coords"><span>Endereço aprox.:</span> <span id="loc-addr">—</span></div>
+          <button id="btn-atualizar-loc" class="btn-outline-navy" type="button">Atualizar localização</button>
+        </div>
+      </div>
+
+      <label class="field" for="input-nome">Nome do edifício ou empresa
+        <input id="input-nome" type="text" placeholder="Ex: Edifício Central" required>
+      </label>
+
+      <label class="field" for="input-capacidade">Capacidade da RTI (litros)
+        <input id="input-capacidade" type="number" min="0" step="1" placeholder="Ex: 20000" required>
+      </label>
+
+      <div class="field">
+        Hidrantes
+        <label class="checkbox-row"><input id="check-fachada" type="checkbox"> Hidrante de fachada (parede)</label>
+        <label class="checkbox-row"><input id="check-recalque" type="checkbox"> Hidrante de recalque (calçada)</label>
+      </div>
+
+      <p id="form-error" class="field-error u-hidden"></p>
+
+      <button id="btn-salvar" class="btn-red" type="submit">Salvar cadastro</button>
+    </form>
+  </div>
+</div>
+
+<!-- Leaflet (fallback OSM) -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="app.js"></script>
+<script>
+  // Google Maps só é carregado se houver uma chave configurada em app.js
+  if (window.MAPS_API_KEY) {
+    var s = document.createElement('script');
+    s.src = 'https://maps.googleapis.com/maps/api/js?key=' + encodeURIComponent(window.MAPS_API_KEY) + '&callback=initGoogleMap';
+    s.async = true;
+    document.head.appendChild(s);
+  } else {
+    document.addEventListener('DOMContentLoaded', initLeafletMap);
+  }
+</script>
+</body>
+</html>
