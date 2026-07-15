@@ -4,7 +4,7 @@
 // Cole a URL de implantação (/exec) do Apps Script (apps-script/Code.gs) aqui.
 // Enquanto vazia, os cadastros ficam salvos no localStorage do navegador
 // (modo teste) e não são compartilhados entre dispositivos.
-const SHEETS_API_URL = "";
+const SHEETS_API_URL = "https://script.google.com/macros/s/AKfycbwQwjmNoPHYD0lOvqaAsOs9wQntZ24p68y9cAGn1yck7cUgmZia_-6aH2yv1dqPvmcIGQ/exec";
 
 const DEFAULT_CENTER = { lat: -9.3891, lng: -40.5030 }; // Petrolina-PE
 const LOCAL_STORAGE_KEY = 'rti_catsertao_points';
