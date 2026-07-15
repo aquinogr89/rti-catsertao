@@ -36,7 +36,7 @@ main.map-area{ position:relative; flex:1 1 auto; min-height:0; width:100%; }
 
 /* Botão flutuante "Cadastrar RTI" */
 .btn-fab{
-  position:absolute; left:50%; bottom:18px; transform:translateX(-50%); z-index:5;
+    position:absolute; left:50%; bottom:18px; transform:translateX(-50%); z-index:900;
   font-family:'Oswald', sans-serif; font-weight:600; font-size:14px; letter-spacing:.05em;
   text-transform:uppercase; color:#fff; background:var(--red); border:none;
   padding:14px 26px; border-radius:999px; cursor:pointer; box-shadow:0 10px 26px -10px rgba(0,0,0,.5);
@@ -47,7 +47,7 @@ main.map-area{ position:relative; flex:1 1 auto; min-height:0; width:100%; }
 
 /* Botão "Atualizar localização" (canto) */
 .btn-locate{
-  position:absolute; right:12px; bottom:18px; z-index:5; width:44px; height:44px;
+    position:absolute; right:12px; bottom:18px; z-index:900; width:44px; height:44px;
   background:#fff; border:1px solid var(--border-2); border-radius:50%; cursor:pointer;
   display:flex; align-items:center; justify-content:center; box-shadow:0 8px 20px -10px rgba(0,0,0,.4);
   font-size:18px; color:var(--navy);
