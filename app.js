@@ -9,8 +9,24 @@ const SHEETS_API_URL = "https://script.google.com/macros/s/AKfycbwQwjmNoPHYD0lOv
 const DEFAULT_CENTER = { lat: -9.3891, lng: -40.5030 }; // Petrolina-PE
 const LOCAL_STORAGE_KEY = 'rti_catsertao_points';
 
+// Login é feito no site principal; os dois sites são publicados sob o mesmo
+// domínio (aquinogr89.github.io), então sessionStorage é compartilhado desde
+// que a navegação entre eles ocorra na mesma aba (link normal, sem target=_blank).
+const CATSERTAO_URL = 'https://aquinogr89.github.io/catsertao/';
+const CAT_SESSION_KEY = 'cat_session';
+const RTI_ALLOWED_PROFILES = ['admin_master', 'admin', 'user1'];
+
 let mapAdapter = null;
 let currentCapture = null; // { lat, lng, endereco }
+
+function getSession() {
+  try {
+    const session = JSON.parse(sessionStorage.getItem(CAT_SESSION_KEY) || 'null');
+    return (session && session.token && session.perfil) ? session : null;
+  } catch (e) {
+    return null;
+  }
+}
 
 // ===================== Utilitários =====================
 function show(el) { el.classList.remove('u-hidden'); }
@@ -149,15 +165,19 @@ function loadPoints() {
   }
 }
 
-function savePoint(payload) {
+function savePoint(record, token) {
   if (SHEETS_API_URL) {
+    const payload = Object.assign({ action: 'cadastrarRTI', token: token }, record);
     return fetch(SHEETS_API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify(payload)
-    }).then(function (r) { return r.json(); });
+    }).then(function (r) { return r.json(); }).then(function (res) {
+      if (!res.ok) return Promise.reject(new Error(res.error || 'Falha ao salvar.'));
+      return res;
+    });
   }
-  return saveLocalPoint(payload);
+  return saveLocalPoint(record);
 }
 
 function startApp() {
@@ -218,6 +238,11 @@ function wireCadastroModal() {
   }
 
   function openModal() {
+    const session = getSession();
+    if (!session || RTI_ALLOWED_PROFILES.indexOf(session.perfil) === -1) {
+      window.location.href = CATSERTAO_URL;
+      return;
+    }
     form.reset();
     hide(formError);
     show(overlay);
@@ -240,6 +265,13 @@ function wireCadastroModal() {
     const nome = document.getElementById('input-nome').value.trim();
     const capacidade = document.getElementById('input-capacidade').value;
 
+    const session = getSession();
+    if (!session || RTI_ALLOWED_PROFILES.indexOf(session.perfil) === -1) {
+      formError.textContent = 'Sua sessão expirou. Você será redirecionado para o login.';
+      show(formError);
+      setTimeout(function () { window.location.href = CATSERTAO_URL; }, 1500);
+      return;
+    }
     if (!currentCapture || typeof currentCapture.lat !== 'number') {
       formError.textContent = 'Não foi possível obter sua localização. Toque em "Atualizar localização" e tente novamente.';
       show(formError);
@@ -256,7 +288,7 @@ function wireCadastroModal() {
       return;
     }
 
-    const payload = {
+    const record = {
       timestamp: new Date().toISOString(),
       lat: currentCapture.lat,
       lng: currentCapture.lng,
@@ -270,13 +302,13 @@ function wireCadastroModal() {
     btnSalvar.disabled = true;
     btnSalvar.textContent = 'Salvando...';
 
-    savePoint(payload)
+    savePoint(record, session.token)
       .then(function () {
-        mapAdapter.addMarker(normalizePoint(payload));
+        mapAdapter.addMarker(normalizePoint(record));
         closeModal();
       })
-      .catch(function () {
-        formError.textContent = 'Não foi possível salvar agora. Verifique sua conexão e tente novamente.';
+      .catch(function (err) {
+        formError.textContent = (err && err.message) || 'Não foi possível salvar agora. Verifique sua conexão e tente novamente.';
         show(formError);
       })
       .finally(function () {
