@@ -273,6 +273,9 @@ function handleDesativarUsuario_(body) {
   if (sessao.erro) return { ok: false, error: sessao.erro };
 
   var loginAlvo = String(body.login || '').trim().toLowerCase();
+  if (loginAlvo === sessao.login) {
+    return { ok: false, error: 'Você não pode desativar sua própria conta.' };
+  }
   var usuario = buscarUsuario_(loginAlvo);
   if (!usuario) return { ok: false, error: 'Usuário não encontrado.' };
   if (!podeGerenciarPerfil_(sessao.perfil, usuario.perfil)) {
@@ -282,6 +285,50 @@ function handleDesativarUsuario_(body) {
   usuariosSheet_().getRange(usuario._row, 7).setValue(false); // coluna "ativo"
   encerrarSessoesDoUsuario_(loginAlvo);
   registrarLog_(sessao.login, sessao.perfil, 'desativacao_usuario', 'desativou "' + loginAlvo + '"');
+  return { ok: true };
+}
+
+function handleReativarUsuario_(body) {
+  var sessao = exigirSessao_(body.token, ['admin_master', 'admin']);
+  if (sessao.erro) return { ok: false, error: sessao.erro };
+
+  var loginAlvo = String(body.login || '').trim().toLowerCase();
+  var usuario = buscarUsuario_(loginAlvo);
+  if (!usuario) return { ok: false, error: 'Usuário não encontrado.' };
+  if (!podeGerenciarPerfil_(sessao.perfil, usuario.perfil)) {
+    return { ok: false, error: 'Você não tem permissão para reativar esse usuário.' };
+  }
+
+  usuariosSheet_().getRange(usuario._row, 7).setValue(true); // coluna "ativo"
+  registrarLog_(sessao.login, sessao.perfil, 'reativacao_usuario', 'reativou "' + loginAlvo + '"');
+  return { ok: true };
+}
+
+// Exclusão definitiva. Só é permitida para usuários já desativados — força
+// passar por "Desativar" antes, evitando remover por engano uma conta em uso
+// (a sessão ativa, se houver, já foi encerrada no momento da desativação).
+// Apagar a linha não quebra o LOG nem a coluna "cadastrado_por" da aba RTI:
+// os dois guardam o login como texto (um retrato do momento), não uma
+// referência viva ao cadastro do usuário.
+function handleExcluirUsuario_(body) {
+  var sessao = exigirSessao_(body.token, ['admin_master', 'admin']);
+  if (sessao.erro) return { ok: false, error: sessao.erro };
+
+  var loginAlvo = String(body.login || '').trim().toLowerCase();
+  if (loginAlvo === sessao.login) {
+    return { ok: false, error: 'Você não pode excluir sua própria conta.' };
+  }
+  var usuario = buscarUsuario_(loginAlvo);
+  if (!usuario) return { ok: false, error: 'Usuário não encontrado.' };
+  if (!podeGerenciarPerfil_(sessao.perfil, usuario.perfil)) {
+    return { ok: false, error: 'Você não tem permissão para excluir esse usuário.' };
+  }
+  if (usuarioAtivo_(usuario)) {
+    return { ok: false, error: 'Desative o usuário antes de excluí-lo definitivamente.' };
+  }
+
+  usuariosSheet_().deleteRow(usuario._row);
+  registrarLog_(sessao.login, sessao.perfil, 'exclusao_usuario', 'excluiu "' + loginAlvo + '" (' + usuario.perfil + ')');
   return { ok: true };
 }
 

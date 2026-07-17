@@ -83,6 +83,8 @@ function doPost(e) {
     case 'listarUsuarios': return jsonResponse_(handleListarUsuarios_(body));
     case 'criarUsuario': return jsonResponse_(handleCriarUsuario_(body));
     case 'desativarUsuario': return jsonResponse_(handleDesativarUsuario_(body));
+    case 'reativarUsuario': return jsonResponse_(handleReativarUsuario_(body));
+    case 'excluirUsuario': return jsonResponse_(handleExcluirUsuario_(body));
     case 'alterarSenha': return jsonResponse_(handleAlterarSenha_(body));
     case 'obterTermo': return jsonResponse_(handleObterTermo_(body));
     case 'listarLog': return jsonResponse_(handleListarLog_(body));
