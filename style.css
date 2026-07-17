@@ -54,6 +54,15 @@ main.map-area{ position:relative; flex:1 1 auto; min-height:0; width:100%; }
 }
 .btn-locate:hover{ border-color:var(--red); color:var(--red); }
 
+/* Botão "Voltar ao site principal" (canto oposto ao de localização) */
+.btn-back-main{
+  position:absolute; left:12px; bottom:18px; z-index:900; width:44px; height:44px;
+  background:#fff; border:1px solid var(--border-2); border-radius:50%; cursor:pointer;
+  display:flex; align-items:center; justify-content:center; box-shadow:0 8px 20px -10px rgba(0,0,0,.4);
+  font-size:18px; color:var(--navy); text-decoration:none;
+}
+.btn-back-main:hover{ border-color:var(--red); color:var(--red); }
+
 /* ===== Popup do marcador (Leaflet) ===== */
 .rti-popup{ font-family:'Public Sans', sans-serif; font-size:13px; line-height:1.5; color:var(--ink); min-width:200px; }
 .rti-popup strong{ font-family:'Oswald', sans-serif; font-size:14px; text-transform:uppercase; letter-spacing:.01em; display:block; margin-bottom:4px; color:var(--navy); }
@@ -125,4 +134,5 @@ footer.bottom{ background:var(--navy); color:#c8cde0; flex:0 0 auto; }
 @media (max-width: 480px){
   .btn-fab{ font-size:13px; padding:12px 20px; bottom:14px; }
   .btn-locate{ width:40px; height:40px; bottom:14px; right:10px; }
+  .btn-back-main{ width:40px; height:40px; bottom:14px; left:10px; }
 }

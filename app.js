@@ -12,7 +12,8 @@ const LOCAL_STORAGE_KEY = 'rti_catsertao_points';
 // Login é feito no site principal; os dois sites são publicados sob o mesmo
 // domínio (aquinogr89.github.io), então sessionStorage é compartilhado desde
 // que a navegação entre eles ocorra na mesma aba (link normal, sem target=_blank).
-const CATSERTAO_URL = 'https://aquinogr89.github.io/catsertao/';
+const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+const CATSERTAO_URL = isLocalhost ? 'http://localhost:5500/' : 'https://aquinogr89.github.io/catsertao/';
 const CAT_SESSION_KEY = 'cat_session';
 const RTI_ALLOWED_PROFILES = ['admin_master', 'admin', 'user1'];
 
@@ -248,6 +249,8 @@ function startApp() {
   document.getElementById('btn-locate').addEventListener('click', function () {
     determineInitialLocation(function (loc) { if (loc) mapAdapter.setCenter(loc.lat, loc.lng, 16); });
   });
+
+  document.getElementById('btn-back-main').href = CATSERTAO_URL;
 
   wireCadastroModal();
 }
