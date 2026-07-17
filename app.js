@@ -31,6 +31,47 @@ function getSession() {
   }
 }
 
+// ===================== Logout por inatividade =====================
+// Mesma chave/lógica do catsertao/common.js (CatAuth.iniciarMonitorInatividade)
+// — repositório separado, sem acesso a esse módulo, mas lendo o mesmo
+// localStorage (mesma origem aquinogr89.github.io) o efeito é o mesmo: 30 min
+// sem interação em QUALQUER aba (deste site ou do catsertao) desloga todas.
+const INATIVIDADE_KEY = 'cat_last_activity';
+const INATIVIDADE_LIMITE_MS = 30 * 60 * 1000;
+const INATIVIDADE_CHECK_MS = 30 * 1000;
+const INATIVIDADE_THROTTLE_MS = 5 * 1000;
+
+function registrarAtividade() {
+  const agora = Date.now();
+  const ultimo = Number(localStorage.getItem(INATIVIDADE_KEY) || 0);
+  if (agora - ultimo > INATIVIDADE_THROTTLE_MS) {
+    localStorage.setItem(INATIVIDADE_KEY, String(agora));
+  }
+}
+
+function iniciarMonitorInatividade() {
+  registrarAtividade();
+  ['mousemove', 'mousedown', 'keydown', 'scroll', 'touchstart', 'click'].forEach(function (evt) {
+    document.addEventListener(evt, registrarAtividade, { passive: true });
+  });
+
+  setInterval(function () {
+    const sessao = getSession();
+    if (!sessao) return;
+
+    const ultimo = Number(localStorage.getItem(INATIVIDADE_KEY) || 0);
+    if (Date.now() - ultimo > INATIVIDADE_LIMITE_MS) {
+      fetch(SHEETS_API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ action: 'logout', token: sessao.token })
+      }).catch(function () {});
+      localStorage.removeItem(CAT_SESSION_KEY);
+    }
+  }, INATIVIDADE_CHECK_MS);
+}
+iniciarMonitorInatividade();
+
 // ===================== Utilitários =====================
 function show(el) { el.classList.remove('u-hidden'); }
 function hide(el) { el.classList.add('u-hidden'); }
