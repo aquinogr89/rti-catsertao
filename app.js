@@ -10,8 +10,10 @@ const DEFAULT_CENTER = { lat: -9.3891, lng: -40.5030 }; // Petrolina-PE
 const LOCAL_STORAGE_KEY = 'rti_catsertao_points';
 
 // Login é feito no site principal; os dois sites são publicados sob o mesmo
-// domínio (aquinogr89.github.io), então sessionStorage é compartilhado desde
-// que a navegação entre eles ocorra na mesma aba (link normal, sem target=_blank).
+// domínio (aquinogr89.github.io), então localStorage é compartilhado entre
+// eles independente de abrir em nova aba ou na mesma aba (ao contrário do
+// sessionStorage, que só é herdado ao "Duplicar aba" — uma aba aberta por um
+// link comum, mesmo com target="_blank", recebe sessionStorage vazio).
 const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 const CATSERTAO_URL = isLocalhost ? 'http://localhost:5500/' : 'https://aquinogr89.github.io/catsertao/';
 const CAT_SESSION_KEY = 'cat_session';
@@ -22,7 +24,7 @@ let currentCapture = null; // { lat, lng, endereco }
 
 function getSession() {
   try {
-    const session = JSON.parse(sessionStorage.getItem(CAT_SESSION_KEY) || 'null');
+    const session = JSON.parse(localStorage.getItem(CAT_SESSION_KEY) || 'null');
     return (session && session.token && session.perfil) ? session : null;
   } catch (e) {
     return null;
