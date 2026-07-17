@@ -52,7 +52,33 @@ function gerarSalt_() {
   return Utilities.getUuid();
 }
 
+// Milhares de rodadas de SHA-256 (mesma ideia de PBKDF2, sem depender de uma
+// lib externa que o Apps Script não tem nativamente) — encarece um ataque de
+// força bruta offline caso os hashes algum dia vazem. Usado para toda senha
+// nova ou alterada a partir de agora.
+//
+// 3000 é uma estimativa conservadora: cada rodada é uma chamada a
+// Utilities.computeDigest, que tem um custo fixo por chamada (não é só o
+// SHA-256 em si) — não foi possível medir o tempo real de execução no Apps
+// Script antes de publicar. Se o login ficar perceptivelmente lento depois
+// do deploy, baixe esse número; se quiser mais margem e o login continuar
+// rápido, pode subir.
+var HASH_ITERACOES = 3000;
+
 function hashSenha_(senha, salt) {
+  var valor = salt + senha;
+  for (var i = 0; i < HASH_ITERACOES; i++) {
+    valor = Utilities.base64Encode(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, valor));
+  }
+  return valor;
+}
+
+// Formato antigo (uma rodada só), anterior ao reforço acima. Mantido só para
+// autenticar contas criadas antes dessa mudança — handleLogin_ tenta esse
+// formato como fallback e, se bater, regrava o hash no formato novo na hora
+// (autoatualização silenciosa no próximo login com a senha certa; ninguém
+// precisa resetar senha por causa disso).
+function hashSenhaLegado_(senha, salt) {
   var digest = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, salt + senha);
   return Utilities.base64Encode(digest);
 }
@@ -187,11 +213,20 @@ function handleLogin_(body) {
     return { ok: false, error: 'Usuário ou senha incorretos.' };
   }
 
-  var hashCalculado = hashSenha_(senha, usuario.salt);
-  if (hashCalculado !== usuario.hash_senha) {
+  var senhaConfere = hashSenha_(senha, usuario.salt) === usuario.hash_senha;
+  var eraFormatoLegado = false;
+  if (!senhaConfere && hashSenhaLegado_(senha, usuario.salt) === usuario.hash_senha) {
+    senhaConfere = true;
+    eraFormatoLegado = true;
+  }
+  if (!senhaConfere) {
     cache.put(chaveTentativas, String(tentativas + 1), LOGIN_BLOQUEIO_MINUTOS * 60);
     registrarLog_(login, usuario.perfil, 'login_falho', 'senha incorreta');
     return { ok: false, error: 'Usuário ou senha incorretos.' };
+  }
+
+  if (eraFormatoLegado) {
+    usuariosSheet_().getRange(usuario._row, 2).setValue(hashSenha_(senha, usuario.salt)); // hash_senha
   }
 
   cache.remove(chaveTentativas);
@@ -354,8 +389,17 @@ function handleAlterarSenha_(body) {
   sheet.getRange(usuario._row, 2).setValue(novoHash); // hash_senha
   sheet.getRange(usuario._row, 3).setValue(novoSalt); // salt
 
-  registrarLog_(sessao.login, sessao.perfil, 'alteracao_senha', '');
-  return { ok: true };
+  // Encerra QUALQUER sessão ativa desse login (inclusive a atual) — é o
+  // comportamento certo para "esqueci a senha em algum lugar" ou "acho que
+  // minha conta foi comprometida": trocar a senha derruba todo mundo. Na
+  // sequência, emite um token novo só para este dispositivo, pra quem
+  // acabou de trocar a própria senha de propósito não precisar logar de
+  // novo na hora.
+  encerrarSessoesDoUsuario_(sessao.login);
+  var novoToken = criarSessao_(sessao.login, sessao.perfil);
+
+  registrarLog_(sessao.login, sessao.perfil, 'alteracao_senha', 'encerrou sessoes em outros dispositivos');
+  return { ok: true, token: novoToken };
 }
 
 function handleObterTermo_(body) {
