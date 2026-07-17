@@ -83,6 +83,26 @@
         <label class="checkbox-row"><input id="check-recalque" type="checkbox"> Hidrante de recalque (calçada)</label>
       </div>
 
+      <div class="field">
+        AVCB
+        <label class="checkbox-row"><input id="check-avcb" type="checkbox"> Possui AVCB válido</label>
+        <label id="campo-data-avcb" class="field u-hidden" for="input-data-avcb" style="margin-top:8px;">Data de validade do AVCB
+          <input id="input-data-avcb" type="date">
+        </label>
+      </div>
+
+      <label class="field" for="input-pavimentos">Quantidade de pavimentos da edificação
+        <input id="input-pavimentos" type="number" min="1" step="1" placeholder="Opcional">
+      </label>
+
+      <label class="field" for="input-area">Área construída total (m²)
+        <input id="input-area" type="number" min="0" step="0.01" placeholder="Opcional">
+      </label>
+
+      <label class="field" for="input-altura">Altura da edificação (m)
+        <input id="input-altura" type="number" min="0" step="0.01" placeholder="Opcional">
+      </label>
+
       <p id="form-error" class="field-error u-hidden"></p>
 
       <button id="btn-salvar" class="btn-red" type="submit">Salvar cadastro</button>

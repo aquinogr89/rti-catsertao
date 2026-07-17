@@ -42,22 +42,78 @@ function fmtCoord(n) {
   return typeof n === 'number' ? n.toFixed(6) : n;
 }
 
+function fmtDateBR(isoDate) {
+  // Espera 'YYYY-MM-DD'. Monta a data em UTC para não perder um dia por
+  // causa do fuso horário local (new Date('YYYY-MM-DD') é interpretado
+  // como meia-noite UTC pelo navegador).
+  const parts = String(isoDate).split('-');
+  if (parts.length !== 3) return isoDate;
+  return parts[2] + '/' + parts[1] + '/' + parts[0];
+}
+
+function fmtNumberBR(n, decimals) {
+  return Number(n).toLocaleString('pt-BR', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+}
+
+function toNullableNumber(v) {
+  if (v === '' || v === null || v === undefined) return null;
+  const n = Number(v);
+  return isNaN(n) ? null : n;
+}
+
 function showGeoWarning() {
   show(document.getElementById('geo-warning'));
+}
+
+// Verde: possui AVCB e a validade é hoje ou no futuro. Vermelho: não possui
+// AVCB, ou a data informada já passou. Recalculado a cada renderização do
+// marcador (não fica salvo pronto), comparando sempre com a data atual.
+function getAvcbStatus(point) {
+  if (point.possui_avcb !== 'SIM' || !point.data_validade_avcb) {
+    return { cor: '#C1121F', valido: false, label: 'Não possui AVCB' };
+  }
+
+  const hoje = new Date();
+  hoje.setHours(0, 0, 0, 0);
+  const [ano, mes, dia] = String(point.data_validade_avcb).split('-').map(Number);
+  const validade = new Date(ano, mes - 1, dia);
+
+  if (isNaN(validade.getTime())) {
+    return { cor: '#C1121F', valido: false, label: 'Data de validade do AVCB inválida' };
+  }
+  if (validade >= hoje) {
+    return { cor: '#1E8E4E', valido: true, label: 'Válido até ' + fmtDateBR(point.data_validade_avcb) };
+  }
+  return { cor: '#C1121F', valido: false, label: 'Vencido desde ' + fmtDateBR(point.data_validade_avcb) };
 }
 
 function buildPopupHtml(point) {
   const fachadaYes = point.hidrante_fachada === 'SIM';
   const recalqueYes = point.hidrante_recalque === 'SIM';
+  const avcb = getAvcbStatus(point);
+
+  let detalhesHtml = '';
+  if (point.quantidade_pavimentos != null) {
+    detalhesHtml += '<div class="row"><span class="label">Pavimentos:</span><span>' + point.quantidade_pavimentos + ' pavimento(s)</span></div>';
+  }
+  if (point.area_construida != null) {
+    detalhesHtml += '<div class="row"><span class="label">Área construída:</span><span>' + fmtNumberBR(point.area_construida, 2) + ' m²</span></div>';
+  }
+  if (point.altura_edificacao != null) {
+    detalhesHtml += '<div class="row"><span class="label">Altura:</span><span>' + fmtNumberBR(point.altura_edificacao, 2) + ' m</span></div>';
+  }
+
   return (
     '<div class="rti-popup">' +
       '<strong>' + escapeHtml(point.nome) + '</strong>' +
       '<div class="row"><span class="label">Endereço:</span><span>' + escapeHtml(point.endereco || '—') + '</span></div>' +
       '<div class="row"><span class="label">Coordenadas:</span><span>' + fmtCoord(point.lat) + ', ' + fmtCoord(point.lng) + '</span></div>' +
       '<div class="row"><span class="label">Capacidade:</span><span>' + escapeHtml(point.capacidade_litros) + ' L</span></div>' +
+      detalhesHtml +
       '<div class="chips">' +
         '<span class="chip' + (fachadaYes ? ' yes' : '') + '">Hidrante de fachada: ' + (fachadaYes ? 'SIM' : 'NÃO') + '</span>' +
         '<span class="chip' + (recalqueYes ? ' yes' : '') + '">Hidrante de recalque: ' + (recalqueYes ? 'SIM' : 'NÃO') + '</span>' +
+        '<span class="chip' + (avcb.valido ? ' yes' : '') + '">AVCB: ' + escapeHtml(avcb.label) + '</span>' +
       '</div>' +
     '</div>'
   );
@@ -72,7 +128,12 @@ function normalizePoint(raw) {
     hidrante_fachada: raw.hidrante_fachada === 'SIM' ? 'SIM' : 'NAO',
     hidrante_recalque: raw.hidrante_recalque === 'SIM' ? 'SIM' : 'NAO',
     endereco: raw.endereco || '',
-    timestamp: raw.timestamp || new Date().toISOString()
+    timestamp: raw.timestamp || new Date().toISOString(),
+    possui_avcb: raw.possui_avcb === 'SIM' ? 'SIM' : 'NAO',
+    data_validade_avcb: raw.data_validade_avcb || null,
+    quantidade_pavimentos: toNullableNumber(raw.quantidade_pavimentos),
+    area_construida: toNullableNumber(raw.area_construida),
+    altura_edificacao: toNullableNumber(raw.altura_edificacao)
   };
 }
 
@@ -98,7 +159,7 @@ function initLeafletMap() {
     },
     addMarker: function (point) {
       const marker = L.circleMarker([point.lat, point.lng], {
-        radius: 9, color: '#ffffff', weight: 2, fillColor: '#C1121F', fillOpacity: 1
+        radius: 9, color: '#ffffff', weight: 2, fillColor: getAvcbStatus(point).cor, fillOpacity: 1
       }).addTo(map);
       marker.bindPopup(buildPopupHtml(point));
       return marker;
@@ -237,6 +298,20 @@ function wireCadastroModal() {
     );
   }
 
+  const checkAvcb = document.getElementById('check-avcb');
+  const campoDataAvcb = document.getElementById('campo-data-avcb');
+  const inputDataAvcb = document.getElementById('input-data-avcb');
+
+  function toggleCampoDataAvcb() {
+    if (checkAvcb.checked) {
+      show(campoDataAvcb);
+    } else {
+      hide(campoDataAvcb);
+      inputDataAvcb.value = '';
+    }
+  }
+  checkAvcb.addEventListener('change', toggleCampoDataAvcb);
+
   function openModal() {
     const session = getSession();
     if (!session || RTI_ALLOWED_PROFILES.indexOf(session.perfil) === -1) {
@@ -245,6 +320,7 @@ function wireCadastroModal() {
     }
     form.reset();
     hide(formError);
+    hide(campoDataAvcb); // form.reset() não dispara 'change', então esconde manualmente
     show(overlay);
     captureLocation();
   }
@@ -288,6 +364,33 @@ function wireCadastroModal() {
       return;
     }
 
+    const possuiAvcb = checkAvcb.checked;
+    const dataValidadeAvcb = inputDataAvcb.value;
+    if (possuiAvcb && !dataValidadeAvcb) {
+      formError.textContent = 'Informe a data de validade do AVCB, ou desmarque "Possui AVCB válido".';
+      show(formError);
+      return;
+    }
+
+    const pavimentos = document.getElementById('input-pavimentos').value;
+    if (pavimentos && Number(pavimentos) < 1) {
+      formError.textContent = 'A quantidade de pavimentos deve ser 1 ou mais.';
+      show(formError);
+      return;
+    }
+    const area = document.getElementById('input-area').value;
+    if (area && Number(area) < 0) {
+      formError.textContent = 'A área construída não pode ser negativa.';
+      show(formError);
+      return;
+    }
+    const altura = document.getElementById('input-altura').value;
+    if (altura && Number(altura) < 0) {
+      formError.textContent = 'A altura da edificação não pode ser negativa.';
+      show(formError);
+      return;
+    }
+
     const record = {
       timestamp: new Date().toISOString(),
       lat: currentCapture.lat,
@@ -296,7 +399,12 @@ function wireCadastroModal() {
       capacidade_litros: Number(capacidade),
       hidrante_fachada: document.getElementById('check-fachada').checked ? 'SIM' : 'NAO',
       hidrante_recalque: document.getElementById('check-recalque').checked ? 'SIM' : 'NAO',
-      endereco: currentCapture.endereco || ''
+      endereco: currentCapture.endereco || '',
+      possui_avcb: possuiAvcb ? 'SIM' : 'NAO',
+      data_validade_avcb: possuiAvcb ? dataValidadeAvcb : '',
+      quantidade_pavimentos: pavimentos ? Number(pavimentos) : '',
+      area_construida: area ? Number(area) : '',
+      altura_edificacao: altura ? Number(altura) : ''
     };
 
     btnSalvar.disabled = true;

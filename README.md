@@ -84,6 +84,31 @@ para o login do site principal. O servidor **sempre** revalida o token e o
 perfil a cada cadastro — a checagem no navegador é só para a experiência do
 usuário, não é a barreira de segurança real.
 
+## Campos do cadastro e cor do marcador
+
+Além de nome, capacidade e hidrantes, o formulário de cadastro tem:
+
+- **Possui AVCB válido** (checkbox) — ao marcar, exibe o campo **Data de
+  validade do AVCB** (obrigatório enquanto o checkbox estiver marcado).
+- **Quantidade de pavimentos da edificação** (opcional, mínimo 1).
+- **Área construída total (m²)** (opcional, aceita decimais, não negativo).
+- **Altura da edificação (m)** (opcional, aceita decimais, não negativo).
+
+A cor do marcador no mapa é **recalculada a cada carregamento** (nunca fica
+"salva pronta"), comparando a data de validade do AVCB com a data atual:
+
+- 🟢 **Verde** — possui AVCB e a validade é hoje ou uma data futura.
+- 🔴 **Vermelho** — não possui AVCB, ou a validade já passou (vencido).
+
+O popup do marcador mostra o status do AVCB ("Válido até dd/mm/aaaa",
+"Vencido desde dd/mm/aaaa" ou "Não possui AVCB") e os campos de pavimentos,
+área construída e altura, quando preenchidos. Pontos cadastrados antes
+dessa funcionalidade (sem esses campos) continuam funcionando normalmente:
+aparecem em vermelho (equivalente a "não possui AVCB") e sem essas linhas
+extras no popup — a coluna nova é criada automaticamente pela mesma
+migração que já cuidava de `cadastrado_por` (ver `rtiSheet_()` em
+`apps-script/Code.gs`).
+
 ## 2. Configurar o front-end
 
 O mapa usa **Leaflet + OpenStreetMap** — não precisa de chave nem de cartão

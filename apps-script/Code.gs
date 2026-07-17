@@ -10,19 +10,36 @@
 var RTI_SHEET_NAME = 'RTI';
 var RTI_HEADERS = [
   'timestamp', 'lat', 'lng', 'nome', 'capacidade_litros',
-  'hidrante_fachada', 'hidrante_recalque', 'endereco', 'cadastrado_por'
+  'hidrante_fachada', 'hidrante_recalque', 'endereco',
+  'possui_avcb', 'data_validade_avcb', 'quantidade_pavimentos',
+  'area_construida', 'altura_edificacao', 'cadastrado_por'
 ];
 
 function rtiSheet_() {
   var sheet = ensureSheet_(RTI_SHEET_NAME, RTI_HEADERS);
-  // Migração: plantilhas criadas antes da coluna "cadastrado_por" ganham a
-  // coluna automaticamente, sem afetar os dados já existentes.
-  var headerRange = sheet.getRange(1, 1, 1, sheet.getLastColumn());
-  var headers = headerRange.getValues()[0];
-  if (headers.indexOf('cadastrado_por') === -1) {
-    sheet.getRange(1, headers.length + 1).setValue('cadastrado_por');
-  }
+  // Migração: planilhas criadas antes de alguma dessas colunas ganham a(s)
+  // coluna(s) que faltarem automaticamente, sem afetar os dados já existentes.
+  var lastCol = sheet.getLastColumn();
+  var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+  RTI_HEADERS.forEach(function (h) {
+    if (headers.indexOf(h) === -1) {
+      lastCol += 1;
+      sheet.getRange(1, lastCol).setValue(h);
+      headers.push(h);
+    }
+  });
   return sheet;
+}
+
+// Datas gravadas como texto (ex.: "2026-12-31") às vezes são convertidas
+// automaticamente pelo Google Sheets em células do tipo Date. Normaliza de
+// volta para 'YYYY-MM-DD' antes de responder, já que o front-end compara
+// essa data como texto.
+function normalizarDataCelula_(value) {
+  if (Object.prototype.toString.call(value) === '[object Date]') {
+    return Utilities.formatDate(value, 'GMT-3', 'yyyy-MM-dd');
+  }
+  return value;
 }
 
 function jsonResponse_(obj) {
@@ -43,7 +60,7 @@ function doGet(e) {
     var point = {};
     for (var c = 0; c < headers.length; c++) {
       if (headers[c] === 'cadastrado_por') continue;
-      point[headers[c]] = row[c];
+      point[headers[c]] = headers[c] === 'data_validade_avcb' ? normalizarDataCelula_(row[c]) : row[c];
     }
     points.push(point);
   }
@@ -87,6 +104,30 @@ function handleCadastrarRTI_(body) {
     return { ok: false, error: 'Campos obrigatórios ausentes ou inválidos.' };
   }
 
+  var possuiAvcb = body.possui_avcb === 'SIM';
+  var dataValidadeAvcb = String(body.data_validade_avcb || '').trim();
+  if (possuiAvcb && !/^\d{4}-\d{2}-\d{2}$/.test(dataValidadeAvcb)) {
+    return { ok: false, error: 'Informe a data de validade do AVCB (formato inválido).' };
+  }
+
+  var pavimentos = body.quantidade_pavimentos === '' || body.quantidade_pavimentos == null
+    ? '' : Number(body.quantidade_pavimentos);
+  if (pavimentos !== '' && (isNaN(pavimentos) || pavimentos < 1)) {
+    return { ok: false, error: 'Quantidade de pavimentos inválida.' };
+  }
+
+  var area = body.area_construida === '' || body.area_construida == null
+    ? '' : Number(body.area_construida);
+  if (area !== '' && (isNaN(area) || area < 0)) {
+    return { ok: false, error: 'Área construída inválida.' };
+  }
+
+  var altura = body.altura_edificacao === '' || body.altura_edificacao == null
+    ? '' : Number(body.altura_edificacao);
+  if (altura !== '' && (isNaN(altura) || altura < 0)) {
+    return { ok: false, error: 'Altura da edificação inválida.' };
+  }
+
   rtiSheet_().appendRow([
     body.timestamp || new Date().toISOString(),
     lat,
@@ -96,6 +137,11 @@ function handleCadastrarRTI_(body) {
     body.hidrante_fachada === 'SIM' ? 'SIM' : 'NAO',
     body.hidrante_recalque === 'SIM' ? 'SIM' : 'NAO',
     body.endereco || '',
+    possuiAvcb ? 'SIM' : 'NAO',
+    possuiAvcb ? dataValidadeAvcb : '',
+    pavimentos,
+    area,
+    altura,
     sessao.login
   ]);
 
