@@ -44,6 +44,45 @@ function podeEditar(session) {
   return !!session && RTI_EDIT_PROFILES.indexOf(session.perfil) !== -1;
 }
 
+// ===================== Login sem sair da página =====================
+// Quando não há sessão, em vez de navegar a aba inteira para o site
+// principal (perdendo o estado desta página), abre o login num popup. O
+// popup é o mesmo site principal de sempre — não precisa de nenhuma URL ou
+// parâmetro especial. Como os dois sites são a mesma origem
+// (aquinogr89.github.io), o evento "storage" dispara nesta aba assim que o
+// popup salva a sessão no login, e a ação original (cadastrar/listar) segue
+// sozinha, sem recarregar nem navegar a página do RTI.
+let loginPopup = null;
+let loginPopupListener = null;
+
+function abrirPopupLogin(aoLogar) {
+  if (loginPopup && !loginPopup.closed) {
+    loginPopup.focus();
+    return;
+  }
+
+  loginPopup = window.open(CATSERTAO_URL, 'cat-login', 'width=460,height=680,resizable=yes,scrollbars=yes');
+  if (!loginPopup) {
+    // Popup bloqueado pelo navegador: cai no comportamento antigo (navega a aba).
+    window.location.href = CATSERTAO_URL;
+    return;
+  }
+
+  if (loginPopupListener) window.removeEventListener('storage', loginPopupListener);
+  loginPopupListener = function (e) {
+    if (e.key !== CAT_SESSION_KEY || !e.newValue) return;
+    const session = getSession();
+    if (!session) return;
+
+    window.removeEventListener('storage', loginPopupListener);
+    loginPopupListener = null;
+    if (loginPopup && !loginPopup.closed) loginPopup.close();
+    loginPopup = null;
+    aoLogar(session);
+  };
+  window.addEventListener('storage', loginPopupListener);
+}
+
 // ===================== Logout por inatividade =====================
 // Mesma chave/lógica do catsertao/common.js (CatAuth.iniciarMonitorInatividade)
 // — repositório separado, sem acesso a esse módulo, mas lendo o mesmo
@@ -549,7 +588,11 @@ function wireCadastroModal() {
 
   function openModal(pointToEdit) {
     const session = getSession();
-    if (!session || RTI_ALLOWED_PROFILES.indexOf(session.perfil) === -1) {
+    if (!session) {
+      abrirPopupLogin(function () { openModal(pointToEdit); });
+      return;
+    }
+    if (RTI_ALLOWED_PROFILES.indexOf(session.perfil) === -1) {
       window.location.href = CATSERTAO_URL;
       return;
     }
@@ -761,11 +804,11 @@ function wireListagemModal() {
 
     const tbody = '<tbody>' + points.map(function (p) {
       return '<tr>' +
-        '<td>' + escapeHtml(p.nome) + '</td>' +
+        '<td class="td-nome" title="' + escapeHtml(p.nome) + '">' + escapeHtml(p.nome) + '</td>' +
         '<td class="td-endereco" title="' + escapeHtml(enderecoDisplay(p)) + '">' + escapeHtml(enderecoDisplay(p)) + '</td>' +
         '<td>' + escapeHtml(p.capacidade_litros) + ' L</td>' +
         '<td>' + escapeHtml(fmtAvcbResumo(p)) + '</td>' +
-        '<td>' + escapeHtml(p.cadastrado_por || '—') + '</td>' +
+        '<td class="td-cadastrado" title="' + escapeHtml(p.cadastrado_por || '—') + '">' + escapeHtml(p.cadastrado_por || '—') + '</td>' +
         (mostraEditar ? '<td><button type="button" class="btn-outline-navy btn-sm btn-tabela-editar" data-id="' + escapeHtml(p.id) + '">Editar</button></td>' : '') +
         '</tr>';
     }).join('') + '</tbody>';
@@ -788,6 +831,10 @@ function wireListagemModal() {
 
   function openModal() {
     const session = getSession();
+    if (!session) {
+      abrirPopupLogin(function () { openModal(); });
+      return;
+    }
     if (!podeCadastrar(session)) {
       window.location.href = CATSERTAO_URL;
       return;

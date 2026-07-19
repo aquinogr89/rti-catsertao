@@ -154,7 +154,17 @@ main.map-area{ position:relative; flex:1 1 auto; min-height:0; width:100%; }
   color:var(--muted); background:var(--field-bg);
 }
 .rti-table tbody tr:hover{ background:var(--field-bg); }
-.rti-table td.td-endereco{ max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.rti-table td.td-endereco{ max-width:190px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.rti-table td.td-nome{ max-width:150px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.rti-table td.td-cadastrado{ max-width:130px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+/* Em telas de computador (largura suficiente pra caber a tabela inteira),
+   a janela de listagem cresce pra evitar barra de rolagem horizontal. Em
+   celular, o modal fica limitado pela própria viewport e a rolagem
+   horizontal do .table-wrap continua sendo o comportamento aceitável. */
+@media (min-width: 980px){
+  .modal-card-wide{ max-width:960px; }
+}
 
 /* ===== Rodapé ===== */
 footer.bottom{ background:var(--navy); color:#c8cde0; flex:0 0 auto; }
