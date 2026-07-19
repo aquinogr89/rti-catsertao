@@ -38,7 +38,11 @@
 
   <button id="btn-locate" class="btn-locate" type="button" title="Centralizar na minha localização">📍</button>
   <a id="btn-back-main" class="btn-back-main" href="#" title="Voltar ao site principal" aria-label="Voltar ao site principal">←</a>
-  <button id="btn-cadastrar" class="btn-fab" type="button">+ Cadastrar RTI</button>
+
+  <div class="fab-row">
+    <button id="btn-listar" class="btn-fab btn-fab-outline" type="button">📋 Listar RTIs</button>
+    <button id="btn-cadastrar" class="btn-fab" type="button">+ Cadastrar RTI</button>
+  </div>
 </main>
 
 <footer class="bottom">
@@ -51,28 +55,59 @@
   </div>
 </footer>
 
-<!-- ===== Modal de cadastro ===== -->
+<!-- ===== Modal de cadastro / edição ===== -->
 <div id="modal-overlay" class="modal-overlay u-hidden">
   <div class="modal-card">
     <div class="modal-head">
-      <h2>Cadastrar RTI</h2>
+      <h2 id="modal-titulo">Cadastrar RTI</h2>
       <button id="modal-close" class="modal-close" type="button" aria-label="Fechar">&times;</button>
     </div>
 
     <form id="rti-form" style="display:flex; flex-direction:column; gap:16px;">
 
-      <div class="field">
-        Localização do dispositivo
-        <div class="loc-box">
-          <div class="coords"><span>Lat:</span> <span id="loc-lat">—</span> &nbsp; <span>Long:</span> <span id="loc-lng">—</span></div>
-          <div class="coords"><span>Endereço aprox.:</span> <span id="loc-addr">—</span></div>
-          <button id="btn-atualizar-loc" class="btn-outline-navy" type="button">Atualizar localização</button>
+      <div class="field" id="bloco-localizacao">
+        <div id="loc-modo-tabs" class="loc-tabs u-hidden">
+          <button type="button" class="loc-tab active" data-modo="gps">📍 Minha localização (GPS)</button>
+          <button type="button" class="loc-tab" data-modo="manual">🗺️ Marcar no mapa</button>
+        </div>
+
+        <div id="loc-gps-box">
+          <div class="loc-box">
+            <div class="coords"><span>Lat:</span> <span id="loc-lat">—</span> &nbsp; <span>Long:</span> <span id="loc-lng">—</span></div>
+            <button id="btn-atualizar-loc" class="btn-outline-navy" type="button">Atualizar localização</button>
+          </div>
+        </div>
+
+        <div id="loc-manual-box" class="u-hidden">
+          <p class="q-hint">Toque no mapa para marcar o ponto exato do RTI. Você pode arrastar o marcador para ajustar.</p>
+          <div id="mini-map"></div>
+          <div class="loc-box" style="margin-top:8px;">
+            <div class="coords"><span>Lat:</span> <span id="loc-lat-manual">—</span> &nbsp; <span>Long:</span> <span id="loc-lng-manual">—</span></div>
+          </div>
         </div>
       </div>
 
       <label class="field" for="input-nome">Nome do edifício ou empresa
         <input id="input-nome" type="text" placeholder="Ex: Edifício Central" required>
       </label>
+
+      <div class="field">
+        Endereço
+        <div class="endereco-grid">
+          <label class="field" for="input-rua">Rua/Avenida
+            <input id="input-rua" type="text" placeholder="Ex: Av. Cardoso de Sá">
+          </label>
+          <label class="field" for="input-numero">Número
+            <input id="input-numero" type="text" placeholder='Ex: 123 ou "NI"'>
+          </label>
+          <label class="field" for="input-bairro">Bairro
+            <input id="input-bairro" type="text" placeholder="Ex: Centro">
+          </label>
+          <label class="field" for="input-cidade">Cidade
+            <input id="input-cidade" type="text" placeholder="Ex: Petrolina">
+          </label>
+        </div>
+      </div>
 
       <label class="field" for="input-capacidade">Capacidade da RTI (litros)
         <input id="input-capacidade" type="number" min="0" step="1" placeholder="Ex: 20000" required>
@@ -108,6 +143,20 @@
 
       <button id="btn-salvar" class="btn-red" type="submit">Salvar cadastro</button>
     </form>
+  </div>
+</div>
+
+<!-- ===== Modal de listagem ===== -->
+<div id="modal-listar-overlay" class="modal-overlay u-hidden">
+  <div class="modal-card modal-card-wide">
+    <div class="modal-head">
+      <h2>RTIs cadastrados</h2>
+      <button id="modal-listar-close" class="modal-close" type="button" aria-label="Fechar">&times;</button>
+    </div>
+    <p id="listar-status" class="q-hint">Carregando...</p>
+    <div class="table-wrap">
+      <table id="tabela-rtis" class="rti-table u-hidden"></table>
+    </div>
   </div>
 </div>
 
