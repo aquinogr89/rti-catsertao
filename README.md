@@ -1,12 +1,14 @@
-# Cadastro de RTI — CAT Sertão
+# Mapa de SCI — CAT Sertão
 
-Site estático para cadastro e visualização em mapa de pontos de Reserva Técnica de
-Incêndio (RTI) do CAT Sertão — Centro de Atividades Técnicas do Sertão (CBMPE).
+Site estático para cadastro e visualização em mapa de pontos de Sistema de
+Combate a Incêndio (SCI) do CAT Sertão — Centro de Atividades Técnicas do
+Sertão (CBMPE): reserva técnica de incêndio (RTI, capacidade de água),
+hidrantes, AVCB e caldeira.
 
 Site independente, sem nenhum link de/para o site principal do CAT Sertão — mas
 compartilha o **mesmo backend** (Google Apps Script) e o **mesmo login** do site
 principal ([aquinogr89/catsertao](https://github.com/aquinogr89/catsertao)): o
-mapa é público para consulta, mas **cadastrar** um ponto de RTI exige estar
+mapa é público para consulta, mas **cadastrar** um ponto de SCI exige estar
 logado no site principal com um perfil autorizado (`admin_master`, `admin` ou
 `user1`). Veja a seção [Autenticação e perfis](#autenticação-e-perfis) abaixo.
 
@@ -16,7 +18,7 @@ logado no site principal com um perfil autorizado (`admin_master`, `admin` ou
 index.html            página única (mapa + modal de cadastro)
 style.css              estilos (paleta extraída do site principal)
 app.js                  lógica: mapa (Leaflet + OpenStreetMap), geolocalização, cadastro
-apps-script/Code.gs    backend: doGet (mapa público) + doPost (cadastro de RTI, autenticado)
+apps-script/Code.gs    backend: doGet (mapa público) + doPost (cadastro de SCI, autenticado)
 apps-script/Auth.gs    backend: login, sessões, usuários, termo de compromisso, LOG de auditoria
 CAT-SERTAO-SEM-FUNDO.png  logo usado no cabeçalho/rodapé
 ```
@@ -72,12 +74,12 @@ Pages, que é público. Perfis:
 
 | Perfil         | Pode fazer |
 |----------------|------------|
-| `admin_master` | Tudo: cadastrar RTI, ver Termo de Compromisso, gerenciar **qualquer** usuário (inclusive outros admins), ver o LOG de auditoria. |
-| `admin`        | Cadastrar RTI, ver Termo de Compromisso, criar/desativar apenas usuários `user1`/`user2` (nunca outro admin). |
-| `user1`        | Apenas cadastrar RTI (e ver o mapa, que é público). |
-| `user2`        | Apenas navegação básica do site principal (sem RTI, sem Termo). |
+| `admin_master` | Tudo: cadastrar SCI, ver Termo de Compromisso, gerenciar **qualquer** usuário (inclusive outros admins), ver o LOG de auditoria. |
+| `admin`        | Cadastrar SCI, ver Termo de Compromisso, criar/desativar apenas usuários `user1`/`user2` (nunca outro admin). |
+| `user1`        | Apenas cadastrar SCI (e ver o mapa, que é público). |
+| `user2`        | Apenas navegação básica do site principal (sem SCI, sem Termo). |
 
-O botão **"Cadastrar RTI"** deste site verifica, no navegador, se existe uma
+O botão **"Cadastrar SCI"** deste site verifica, no navegador, se existe uma
 sessão válida em `sessionStorage` (compartilhada com o site principal por
 estarem sob o mesmo domínio `aquinogr89.github.io`); se não houver, redireciona
 para o login do site principal. O servidor **sempre** revalida o token e o
@@ -88,6 +90,7 @@ usuário, não é a barreira de segurança real.
 
 Além de nome, capacidade e hidrantes, o formulário de cadastro tem:
 
+- **Possui caldeira** (checkbox), logo antes do bloco de AVCB.
 - **Possui AVCB válido** (checkbox) — ao marcar, exibe o campo **Data de
   validade do AVCB** (obrigatório enquanto o checkbox estiver marcado).
 - **Quantidade de pavimentos da edificação** (opcional, mínimo 1).
@@ -157,7 +160,7 @@ rede Wi-Fi, usando o IP da máquina.
 - A geocodificação reversa usa o Nominatim (OpenStreetMap) — use com
   moderação, pois esse serviço público tem limite de requisições por
   segundo.
-- Cada ponto de RTI cadastrado grava o login de quem cadastrou na coluna
+- Cada ponto de SCI cadastrado grava o login de quem cadastrou na coluna
   `cadastrado_por` da aba `RTI`, e o evento fica registrado na aba `LOG`
   (ação `cadastro_rti`), visível para `admin_master` no painel "LOG" do
   site principal.

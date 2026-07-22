@@ -1,5 +1,5 @@
 /**
- * Backend do Cadastro de RTI (CAT Sertão) — Google Apps Script.
+ * Backend do Mapa de SCI (CAT Sertão) — Google Apps Script.
  * Implante como Web App (Executar como: Eu / Quem tem acesso: Qualquer pessoa)
  * e cole a URL /exec gerada em SHEETS_API_URL (rti-catsertao/app.js) e em
  * APPS_SCRIPT_URL (catsertao/index.html) — os dois sites usam o MESMO backend.
@@ -17,7 +17,10 @@ var RTI_HEADERS = [
   // bairro/cidade), obrigatórios a partir desta versão. Ficam no final da
   // lista de propósito: rtiSheet_() só ADICIONA colunas que faltam, sempre no
   // final da planilha já existente — nunca reordena as colunas atuais.
-  'id', 'rua', 'numero', 'bairro', 'cidade'
+  'id', 'rua', 'numero', 'bairro', 'cidade',
+  // Campo Caldeira: mesmo padrão dos anteriores, adicionado no final para
+  // não reordenar planilhas já em produção.
+  'possui_caldeira'
 ];
 
 // Quem pode cadastrar/listar RTI. Editar é mais restrito (ver handleEditarRTI_).
@@ -186,6 +189,7 @@ function validarDadosRTI_(body) {
     lat: lat, lng: lng, nome: nome, capacidade: capacidade,
     hidranteFachada: body.hidrante_fachada === 'SIM' ? 'SIM' : 'NAO',
     hidranteRecalque: body.hidrante_recalque === 'SIM' ? 'SIM' : 'NAO',
+    possuiCaldeira: body.possui_caldeira === 'SIM' ? 'SIM' : 'NAO',
     rua: rua, numero: numero, bairro: bairro, cidade: cidade,
     endereco: rua + ', ' + numero + ' - ' + bairro + ', ' + cidade,
     possuiAvcb: possuiAvcb ? 'SIM' : 'NAO',
@@ -208,14 +212,15 @@ function handleCadastrarRTI_(body) {
     d.hidranteFachada, d.hidranteRecalque, d.endereco,
     d.possuiAvcb, d.dataValidadeAvcb, d.pavimentos, d.area, d.altura,
     sessao.login,
-    id, d.rua, d.numero, d.bairro, d.cidade
+    id, d.rua, d.numero, d.bairro, d.cidade,
+    d.possuiCaldeira
   ]);
 
   registrarLog_(sessao.login, sessao.perfil, 'cadastro_rti', d.nome + ' (' + d.capacidade + ' L)');
   return { ok: true, id: id };
 }
 
-// Lista todos os RTIs cadastrados, incluindo quem cadastrou cada um — ao
+// Lista todos os SCIs cadastrados, incluindo quem cadastrou cada um — ao
 // contrário do doGet (mapa público), que omite "cadastrado_por". Mesmos
 // perfis que podem cadastrar (admin_master, admin, user1) podem consultar
 // essa listagem; a edição em si é restrita a admin_master/admin (ver abaixo).
@@ -290,6 +295,7 @@ function handleEditarRTI_(body) {
       case 'numero': return d.numero;
       case 'bairro': return d.bairro;
       case 'cidade': return d.cidade;
+      case 'possui_caldeira': return d.possuiCaldeira;
       case 'possui_avcb': return d.possuiAvcb;
       case 'data_validade_avcb': return d.dataValidadeAvcb;
       case 'quantidade_pavimentos': return d.pavimentos;

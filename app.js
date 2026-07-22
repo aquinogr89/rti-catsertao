@@ -23,7 +23,7 @@ const RTI_EDIT_PROFILES = ['admin_master', 'admin'];
 let mapAdapter = null;
 let currentCapture = null; // { lat, lng, rua, numero, bairro, cidade }
 let locMode = 'gps'; // 'gps' | 'manual' — só relevante para admin_master/admin
-let editingId = null; // null = cadastro novo; string = editando esse RTI
+let editingId = null; // null = cadastro novo; string = editando esse SCI
 let miniMap = null;
 let miniMarker = null;
 
@@ -51,7 +51,7 @@ function podeEditar(session) {
 // parâmetro especial. Como os dois sites são a mesma origem
 // (aquinogr89.github.io), o evento "storage" dispara nesta aba assim que o
 // popup salva a sessão no login, e a ação original (cadastrar/listar) segue
-// sozinha, sem recarregar nem navegar a página do RTI.
+// sozinha, sem recarregar nem navegar a página do SCI.
 let loginPopup = null;
 let loginPopupListener = null;
 
@@ -197,6 +197,7 @@ function enderecoDisplay(point) {
 function buildPopupHtml(point, session) {
   const fachadaYes = point.hidrante_fachada === 'SIM';
   const recalqueYes = point.hidrante_recalque === 'SIM';
+  const caldeiraYes = point.possui_caldeira === 'SIM';
   const avcb = getAvcbStatus(point);
 
   let detalhesHtml = '';
@@ -211,7 +212,7 @@ function buildPopupHtml(point, session) {
   }
 
   const btnEditar = (podeEditar(session) && point.id)
-    ? '<button type="button" class="btn-outline-navy btn-popup-editar" data-id="' + escapeHtml(point.id) + '" style="margin-top:10px;width:100%;">✏️ Editar RTI</button>'
+    ? '<button type="button" class="btn-outline-navy btn-popup-editar" data-id="' + escapeHtml(point.id) + '" style="margin-top:10px;width:100%;">✏️ Editar SCI</button>'
     : '';
 
   return (
@@ -224,6 +225,7 @@ function buildPopupHtml(point, session) {
       '<div class="chips">' +
         '<span class="chip' + (fachadaYes ? ' yes' : '') + '">Hidrante de fachada: ' + (fachadaYes ? 'SIM' : 'NÃO') + '</span>' +
         '<span class="chip' + (recalqueYes ? ' yes' : '') + '">Hidrante de recalque: ' + (recalqueYes ? 'SIM' : 'NÃO') + '</span>' +
+        '<span class="chip' + (caldeiraYes ? ' yes' : '') + '">Caldeira: ' + (caldeiraYes ? 'SIM' : 'NÃO') + '</span>' +
         '<span class="chip' + (avcb.valido ? ' yes' : '') + '">AVCB: ' + escapeHtml(avcb.label) + '</span>' +
       '</div>' +
       btnEditar +
@@ -246,6 +248,7 @@ function normalizePoint(raw) {
     bairro: raw.bairro || '',
     cidade: raw.cidade || '',
     timestamp: raw.timestamp || new Date().toISOString(),
+    possui_caldeira: raw.possui_caldeira === 'SIM' ? 'SIM' : 'NAO',
     possui_avcb: raw.possui_avcb === 'SIM' ? 'SIM' : 'NAO',
     data_validade_avcb: raw.data_validade_avcb || null,
     quantidade_pavimentos: toNullableNumber(raw.quantidade_pavimentos),
@@ -351,7 +354,7 @@ function saveLocalPoint(point) {
 function updateLocalPoint(id, novosDados) {
   const points = getLocalPoints();
   const idx = points.findIndex(function (p) { return p.id === id; });
-  if (idx === -1) return Promise.reject(new Error('RTI não encontrado.'));
+  if (idx === -1) return Promise.reject(new Error('SCI não encontrado.'));
   points[idx] = Object.assign({}, points[idx], novosDados, { id: id });
   setLocalPoints(points);
   return Promise.resolve(points[idx]);
@@ -576,6 +579,7 @@ function wireCadastroModal() {
     document.getElementById('input-capacidade').value = point.capacidade_litros || '';
     document.getElementById('check-fachada').checked = point.hidrante_fachada === 'SIM';
     document.getElementById('check-recalque').checked = point.hidrante_recalque === 'SIM';
+    document.getElementById('check-caldeira').checked = point.possui_caldeira === 'SIM';
     checkAvcb.checked = point.possui_avcb === 'SIM';
     toggleCampoDataAvcb();
     inputDataAvcb.value = point.data_validade_avcb || '';
@@ -606,7 +610,7 @@ function wireCadastroModal() {
     hide(campoDataAvcb); // form.reset() não dispara 'change', então esconde manualmente
 
     editingId = pointToEdit ? pointToEdit.id : null;
-    modalTitulo.textContent = editingId ? 'Editar RTI' : 'Cadastrar RTI';
+    modalTitulo.textContent = editingId ? 'Editar SCI' : 'Cadastrar SCI';
     btnSalvar.textContent = editingId ? 'Salvar edição' : 'Salvar cadastro';
 
     show(overlay);
@@ -662,7 +666,7 @@ function wireCadastroModal() {
     }
     if (!currentCapture || typeof currentCapture.lat !== 'number') {
       formError.textContent = locMode === 'manual'
-        ? 'Toque no mapa para marcar a localização do RTI.'
+        ? 'Toque no mapa para marcar a localização do SCI.'
         : 'Não foi possível obter sua localização. Toque em "Atualizar localização" e tente novamente.';
       show(formError);
       return;
@@ -723,6 +727,7 @@ function wireCadastroModal() {
       capacidade_litros: Number(capacidade),
       hidrante_fachada: document.getElementById('check-fachada').checked ? 'SIM' : 'NAO',
       hidrante_recalque: document.getElementById('check-recalque').checked ? 'SIM' : 'NAO',
+      possui_caldeira: document.getElementById('check-caldeira').checked ? 'SIM' : 'NAO',
       rua: rua,
       numero: numero,
       bairro: bairro,
@@ -790,7 +795,7 @@ function wireListagemModal() {
   function renderTabela(points, session) {
     if (points.length === 0) {
       hide(tabela);
-      status.textContent = 'Nenhum RTI cadastrado ainda.';
+      status.textContent = 'Nenhum SCI cadastrado ainda.';
       show(status);
       return;
     }

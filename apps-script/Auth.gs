@@ -6,12 +6,12 @@
  * nem guarda hash de senha — apenas o token de sessão, que expira sozinho.
  *
  * Perfis e o que cada um pode fazer:
- *   admin_master — tudo: cadastrar RTI, ver termo, gerenciar QUALQUER usuário
+ *   admin_master — tudo: cadastrar SCI, ver termo, gerenciar QUALQUER usuário
  *                  (inclusive outros admins), ver o LOG de auditoria.
- *   admin        — cadastrar RTI, ver termo, criar/desativar apenas
+ *   admin        — cadastrar SCI, ver termo, criar/desativar apenas
  *                  user1/user2 (nunca admin ou admin_master).
- *   user1        — apenas cadastrar RTI.
- *   user2        — apenas navegação básica do site (sem RTI, sem termo).
+ *   user1        — apenas cadastrar SCI.
+ *   user2        — apenas navegação básica do site (sem SCI, sem termo).
  */
 
 var SESSAO_HORAS = 8;
