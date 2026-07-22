@@ -1,7 +1,7 @@
 /**
  * Backend do Mapa de SCI (CAT Sertão) — Google Apps Script.
  * Implante como Web App (Executar como: Eu / Quem tem acesso: Qualquer pessoa)
- * e cole a URL /exec gerada em SHEETS_API_URL (rti-catsertao/app.js) e em
+ * e cole a URL /exec gerada em SHEETS_API_URL (sci-catsertao/app.js) e em
  * APPS_SCRIPT_URL (catsertao/index.html) — os dois sites usam o MESMO backend.
  *
  * Autenticação, usuários e auditoria estão em Auth.gs, no mesmo projeto.
