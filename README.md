@@ -1,27 +1,36 @@
-# Mapa de SCI — CAT Sertão
+# Mapa de OCI — CAT Sertão
 
-Site estático para cadastro e visualização em mapa de pontos de Sistema de
-Combate a Incêndio (SCI) do CAT Sertão — Centro de Atividades Técnicas do
+Site estático para cadastro e visualização em mapa de pontos de Ocupações de
+Combate a Incêndio (OCI) do CAT Sertão — Centro de Atividades Técnicas do
 Sertão (CBMPE): reserva técnica de incêndio (RTI, capacidade de água),
-hidrantes, AVCB e caldeira.
+hidrantes (fachada, recalque e público), AVCB e caldeira.
 
 Site independente, sem nenhum link de/para o site principal do CAT Sertão — mas
 compartilha o **mesmo backend** (Google Apps Script) e o **mesmo login** do site
 principal ([aquinogr89/catsertao](https://github.com/aquinogr89/catsertao)): o
-mapa é público para consulta, mas **cadastrar** um ponto de SCI exige estar
+mapa é público para consulta, mas **cadastrar** um ponto de OCI exige estar
 logado no site principal com um perfil autorizado (`admin_master`, `admin` ou
 `user1`). Veja a seção [Autenticação e perfis](#autenticação-e-perfis) abaixo.
 
 ## Estrutura
 
 ```
-index.html            página única (mapa + modal de cadastro)
+index.html            mapa + modal de cadastro/edição
+listar.html            listagem com filtro (endereço, nome, regularidade) e
+                        distância até a localização do usuário — abre em nova
+                        aba a partir do botão "Listar OCI"
 style.css              estilos (paleta extraída do site principal)
 app.js                  lógica: mapa (Leaflet + OpenStreetMap), geolocalização, cadastro
-apps-script/Code.gs    backend: doGet (mapa público) + doPost (cadastro de SCI, autenticado)
+apps-script/Code.gs    backend: doGet (mapa público) + doPost (cadastro de OCI, autenticado)
 apps-script/Auth.gs    backend: login, sessões, usuários, termo de compromisso, LOG de auditoria
 CAT-SERTAO-SEM-FUNDO.png  logo usado no cabeçalho/rodapé
 ```
+
+`listar.html` reaproveita as funções utilitárias de `app.js` (sessão, chamada
+à API, formatação) na mesma página — não duplica lógica, só adiciona seu
+próprio filtro/ordenação por cima dos mesmos pontos retornados pelo backend.
+O botão "Editar" da listagem manda o admin/admin_master de volta para
+`index.html?editar=<id>`, que abre o modal de edição direto nesse OCI.
 
 `Code.gs` e `Auth.gs` vivem no **mesmo projeto** Apps Script (mesma planilha,
 mesma implantação `/exec`) — não são dois backends separados.
@@ -74,12 +83,12 @@ Pages, que é público. Perfis:
 
 | Perfil         | Pode fazer |
 |----------------|------------|
-| `admin_master` | Tudo: cadastrar SCI, ver Termo de Compromisso, gerenciar **qualquer** usuário (inclusive outros admins), ver o LOG de auditoria. |
-| `admin`        | Cadastrar SCI, ver Termo de Compromisso, criar/desativar apenas usuários `user1`/`user2` (nunca outro admin). |
-| `user1`        | Apenas cadastrar SCI (e ver o mapa, que é público). |
-| `user2`        | Apenas navegação básica do site principal (sem SCI, sem Termo). |
+| `admin_master` | Tudo: cadastrar OCI, ver Termo de Compromisso, gerenciar **qualquer** usuário (inclusive outros admins), ver o LOG de auditoria. |
+| `admin`        | Cadastrar OCI, ver Termo de Compromisso, criar/desativar apenas usuários `user1`/`user2` (nunca outro admin). |
+| `user1`        | Apenas cadastrar OCI (e ver o mapa, que é público). |
+| `user2`        | Apenas navegação básica do site principal (sem OCI, sem Termo). |
 
-O botão **"Cadastrar SCI"** deste site verifica, no navegador, se existe uma
+O botão **"Cadastrar OCI"** deste site verifica, no navegador, se existe uma
 sessão válida em `sessionStorage` (compartilhada com o site principal por
 estarem sob o mesmo domínio `aquinogr89.github.io`); se não houver, redireciona
 para o login do site principal. O servidor **sempre** revalida o token e o
@@ -88,7 +97,8 @@ usuário, não é a barreira de segurança real.
 
 ## Campos do cadastro e cor do marcador
 
-Além de nome, capacidade e hidrantes, o formulário de cadastro tem:
+Além de nome, capacidade e hidrantes (fachada, recalque e **público** — este
+último adicionado no mesmo padrão dos outros dois), o formulário de cadastro tem:
 
 - **Possui caldeira** (checkbox), logo antes do bloco de AVCB.
 - **Possui AVCB válido** (checkbox) — ao marcar, exibe o campo **Data de
@@ -157,10 +167,13 @@ rede Wi-Fi, usando o IP da máquina.
 
 - A geolocalização do dispositivo requer HTTPS (GitHub Pages já serve por
   HTTPS) ou `localhost` — em `http://` "normal" o navegador bloqueia a API.
+  `listar.html` também usa geolocalização (só para calcular a distância até
+  cada OCI, em metros); se o navegador negar ou não suportar, a lista cai
+  para ordenação por nome em vez de distância.
 - A geocodificação reversa usa o Nominatim (OpenStreetMap) — use com
   moderação, pois esse serviço público tem limite de requisições por
   segundo.
-- Cada ponto de SCI cadastrado grava o login de quem cadastrou na coluna
+- Cada ponto de OCI cadastrado grava o login de quem cadastrou na coluna
   `cadastrado_por` da aba `RTI`, e o evento fica registrado na aba `LOG`
   (ação `cadastro_rti`), visível para `admin_master` no painel "LOG" do
   site principal.

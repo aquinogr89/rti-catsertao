@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Listar OCI — CAT Sertão</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#14204A">
+<link rel="icon" type="image/png" href="CAT-SERTAO-SEM-FUNDO.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Public+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="top">
+  <div class="top-inner">
+    <div class="top-logo"><img src="CAT-SERTAO-SEM-FUNDO.png" alt="Brasão do CAT Sertão"></div>
+    <div style="min-width:0;">
+      <div class="top-org">CAT Sertão · CBMPE</div>
+      <h1 class="top-title">Listar OCI</h1>
+      <div class="top-sub">Ocupações de Combate a Incêndio</div>
+    </div>
+  </div>
+</header>
+
+<main class="listar-main">
+  <a class="listar-back" href="index.html">← Voltar ao mapa</a>
+
+  <p id="carregando-msg" class="q-hint">Verificando sessão...</p>
+
+  <div id="negado-box" class="field-error u-hidden" style="margin-bottom:16px;"></div>
+
+  <div id="listar-conteudo" class="u-hidden">
+
+    <div class="listar-filtros">
+      <div class="listar-filtros-grid">
+        <label class="field" for="filtro-endereco">Endereço
+          <input id="filtro-endereco" type="text" placeholder="Ex: Av. Cardoso de Sá">
+        </label>
+        <label class="field" for="filtro-nome">Nome da edificação
+          <input id="filtro-nome" type="text" placeholder="Ex: Edifício Central">
+        </label>
+        <label class="field" for="filtro-regularidade">Regularidade
+          <select id="filtro-regularidade">
+            <option value="todos">Todos</option>
+            <option value="regular">Regular (AVCB válido)</option>
+            <option value="irregular">Irregular (vencido ou sem AVCB)</option>
+          </select>
+        </label>
+      </div>
+      <div class="listar-loc-status">
+        <span id="loc-status-texto">📍 Obtendo sua localização para calcular a distância...</span>
+        <button id="btn-atualizar-loc" type="button" class="btn-outline-navy" style="margin:0;">Atualizar localização</button>
+      </div>
+    </div>
+
+    <p id="listar-resumo" class="listar-resumo"></p>
+
+    <div class="table-wrap">
+      <table id="tabela-oci" class="rti-table u-hidden"></table>
+    </div>
+
+    <button id="btn-mostrar-mais" type="button" class="btn-outline-navy btn-mostrar-mais u-hidden">Mostrar mais (até 20)</button>
+  </div>
+</main>
+
+<footer class="bottom">
+  <div class="bottom-inner">
+    <img src="CAT-SERTAO-SEM-FUNDO.png" alt="">
+    <div class="bottom-text">
+      <strong>Site em desenvolvimento</strong> — desenvolvido pelo CAT Sertão – Centro de Atividades Técnicas do Sertão
+    </div>
+  </div>
+</footer>
+
+<script src="app.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var LIMITE_INICIAL = 10;
+  var LIMITE_MAXIMO = 20;
+
+  var todosOsPontos = [];
+  var userLoc = null; // { lat, lng } | null
+  var limiteAtual = LIMITE_INICIAL;
+
+  var elCarregando = document.getElementById('carregando-msg');
+  var elNegado = document.getElementById('negado-box');
+  var elConteudo = document.getElementById('listar-conteudo');
+  var elLocStatus = document.getElementById('loc-status-texto');
+  var elResumo = document.getElementById('listar-resumo');
+  var elTabela = document.getElementById('tabela-oci');
+  var elBtnMais = document.getElementById('btn-mostrar-mais');
+  var elFiltroEndereco = document.getElementById('filtro-endereco');
+  var elFiltroNome = document.getElementById('filtro-nome');
+  var elFiltroRegularidade = document.getElementById('filtro-regularidade');
+
+  function distanciaMetros(lat1, lng1, lat2, lng2) {
+    var R = 6371000; // raio médio da Terra, em metros
+    function toRad(deg) { return deg * Math.PI / 180; }
+    var dLat = toRad(lat2 - lat1);
+    var dLng = toRad(lng2 - lng1);
+    var a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+    var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  }
+
+  function fmtDistancia(metros) {
+    if (metros == null) return '—';
+    return Math.round(metros).toLocaleString('pt-BR') + ' m';
+  }
+
+  function listaHidrantes(p) {
+    var itens = [];
+    if (p.hidrante_fachada === 'SIM') itens.push('Fachada');
+    if (p.hidrante_recalque === 'SIM') itens.push('Recalque');
+    if (p.hidrante_publico === 'SIM') itens.push('Público');
+    return itens.length ? itens.join(', ') : '—';
+  }
+
+  function obterLocalizacao() {
+    if (!navigator.geolocation) {
+      elLocStatus.textContent = '📍 Este navegador não suporta geolocalização — distância indisponível, ordenando por nome.';
+      userLoc = null;
+      renderizar();
+      return;
+    }
+    elLocStatus.textContent = '📍 Obtendo sua localização para calcular a distância...';
+    navigator.geolocation.getCurrentPosition(
+      function (pos) {
+        userLoc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        elLocStatus.textContent = '📍 Localização obtida — distâncias calculadas a partir daqui.';
+        renderizar();
+      },
+      function () {
+        userLoc = null;
+        elLocStatus.textContent = '📍 Não foi possível obter sua localização — distância indisponível, ordenando por nome.';
+        renderizar();
+      },
+      { enableHighAccuracy: true, timeout: 8000 }
+    );
+  }
+
+  function passaNoFiltro(p) {
+    var qEndereco = elFiltroEndereco.value.trim().toLowerCase();
+    var qNome = elFiltroNome.value.trim().toLowerCase();
+    var regularidade = elFiltroRegularidade.value;
+
+    if (qEndereco && enderecoDisplay(p).toLowerCase().indexOf(qEndereco) === -1) return false;
+    if (qNome && p.nome.toLowerCase().indexOf(qNome) === -1) return false;
+
+    if (regularidade !== 'todos') {
+      var valido = getAvcbStatus(p).valido;
+      if (regularidade === 'regular' && !valido) return false;
+      if (regularidade === 'irregular' && valido) return false;
+    }
+    return true;
+  }
+
+  function renderTabela(pontos, session) {
+    if (pontos.length === 0) {
+      hide(elTabela);
+      hide(elBtnMais);
+      elResumo.textContent = 'Nenhum OCI encontrado para esse filtro.';
+      return;
+    }
+
+    var mostrarEditar = podeEditar(session);
+    var visiveis = pontos.slice(0, limiteAtual);
+
+    var totalTxt = pontos.length === 1 ? '1 OCI encontrado' : pontos.length + ' OCI encontrados';
+    var distTxt = userLoc ? ', ordenados do mais próximo ao mais distante da sua localização' : ', ordenados por nome (localização indisponível)';
+    elResumo.textContent = 'Mostrando ' + visiveis.length + ' de ' + totalTxt + distTxt + '.';
+
+    var thead = '<thead><tr>' +
+      '<th>Nome</th><th>Endereço</th><th>Distância</th><th>Hidrantes</th><th>AVCB</th><th>Cadastrado por</th>' +
+      (mostrarEditar ? '<th></th>' : '') +
+      '</tr></thead>';
+
+    var tbody = '<tbody>' + visiveis.map(function (p) {
+      return '<tr>' +
+        '<td class="td-nome" title="' + escapeHtml(p.nome) + '">' + escapeHtml(p.nome) + '</td>' +
+        '<td class="td-endereco">' + escapeHtml(enderecoDisplay(p)) + '</td>' +
+        '<td class="td-distancia">' + fmtDistancia(p._distancia) + '</td>' +
+        '<td>' + escapeHtml(listaHidrantes(p)) + '</td>' +
+        '<td>' + escapeHtml(getAvcbStatus(p).label) + '</td>' +
+        '<td class="td-cadastrado" title="' + escapeHtml(p.cadastrado_por || '—') + '">' + escapeHtml(p.cadastrado_por || '—') + '</td>' +
+        (mostrarEditar ? '<td><button type="button" class="btn-outline-navy btn-sm btn-editar" data-id="' + escapeHtml(p.id) + '">Editar</button></td>' : '') +
+        '</tr>';
+    }).join('') + '</tbody>';
+
+    elTabela.innerHTML = thead + tbody;
+    show(elTabela);
+
+    if (mostrarEditar) {
+      elTabela.querySelectorAll('.btn-editar').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          window.location.href = 'index.html?editar=' + encodeURIComponent(btn.dataset.id);
+        });
+      });
+    }
+
+    if (pontos.length > limiteAtual) {
+      elBtnMais.textContent = limiteAtual < LIMITE_MAXIMO
+        ? 'Mostrar mais (até ' + Math.min(LIMITE_MAXIMO, pontos.length) + ')'
+        : 'Mostrar mais';
+      show(elBtnMais);
+    } else {
+      hide(elBtnMais);
+    }
+  }
+
+  function renderizar() {
+    var session = getSession();
+
+    var filtrados = todosOsPontos.filter(passaNoFiltro).map(function (p) {
+      p._distancia = userLoc ? distanciaMetros(userLoc.lat, userLoc.lng, p.lat, p.lng) : null;
+      return p;
+    });
+
+    if (userLoc) {
+      filtrados.sort(function (a, b) { return a._distancia - b._distancia; });
+    } else {
+      filtrados.sort(function (a, b) { return a.nome.localeCompare(b.nome, 'pt-BR'); });
+    }
+
+    renderTabela(filtrados, session);
+  }
+
+  elBtnMais.addEventListener('click', function () {
+    limiteAtual = LIMITE_MAXIMO;
+    renderizar();
+  });
+  [elFiltroEndereco, elFiltroNome].forEach(function (el) {
+    el.addEventListener('input', function () { limiteAtual = LIMITE_INICIAL; renderizar(); });
+  });
+  elFiltroRegularidade.addEventListener('change', function () { limiteAtual = LIMITE_INICIAL; renderizar(); });
+  document.getElementById('btn-atualizar-loc').addEventListener('click', obterLocalizacao);
+
+  function mostrarNegado(mensagem) {
+    hide(elCarregando);
+    elNegado.textContent = mensagem;
+    show(elNegado);
+  }
+
+  function iniciar() {
+    var session = getSession();
+    if (!session) {
+      mostrarNegado('Você precisa estar logado para ver a listagem de OCI. Faça login no mapa e abra "Listar OCI" novamente.');
+      return;
+    }
+    if (!podeCadastrar(session)) {
+      window.location.href = CATSERTAO_URL;
+      return;
+    }
+
+    listarRTIsRemoto(session.token).then(function (res) {
+      hide(elCarregando);
+      if (!res.ok) {
+        mostrarNegado(res.error || 'Não foi possível carregar a lista agora.');
+        return;
+      }
+      todosOsPontos = (res.points || []).map(normalizePoint);
+      show(elConteudo);
+      renderizar();
+      obterLocalizacao();
+    }).catch(function () {
+      mostrarNegado('Não foi possível conectar ao servidor agora.');
+    });
+  }
+
+  iniciar();
+})();
+</script>
+</body>
+</html>

@@ -23,7 +23,7 @@ const RTI_EDIT_PROFILES = ['admin_master', 'admin'];
 let mapAdapter = null;
 let currentCapture = null; // { lat, lng, rua, numero, bairro, cidade }
 let locMode = 'gps'; // 'gps' | 'manual' — só relevante para admin_master/admin
-let editingId = null; // null = cadastro novo; string = editando esse SCI
+let editingId = null; // null = cadastro novo; string = editando esse OCI
 let miniMap = null;
 let miniMarker = null;
 
@@ -51,7 +51,7 @@ function podeEditar(session) {
 // parâmetro especial. Como os dois sites são a mesma origem
 // (aquinogr89.github.io), o evento "storage" dispara nesta aba assim que o
 // popup salva a sessão no login, e a ação original (cadastrar/listar) segue
-// sozinha, sem recarregar nem navegar a página do SCI.
+// sozinha, sem recarregar nem navegar a página do OCI.
 let loginPopup = null;
 let loginPopupListener = null;
 
@@ -197,6 +197,7 @@ function enderecoDisplay(point) {
 function buildPopupHtml(point, session) {
   const fachadaYes = point.hidrante_fachada === 'SIM';
   const recalqueYes = point.hidrante_recalque === 'SIM';
+  const publicoYes = point.hidrante_publico === 'SIM';
   const caldeiraYes = point.possui_caldeira === 'SIM';
   const avcb = getAvcbStatus(point);
 
@@ -212,7 +213,7 @@ function buildPopupHtml(point, session) {
   }
 
   const btnEditar = (podeEditar(session) && point.id)
-    ? '<button type="button" class="btn-outline-navy btn-popup-editar" data-id="' + escapeHtml(point.id) + '" style="margin-top:10px;width:100%;">✏️ Editar SCI</button>'
+    ? '<button type="button" class="btn-outline-navy btn-popup-editar" data-id="' + escapeHtml(point.id) + '" style="margin-top:10px;width:100%;">✏️ Editar OCI</button>'
     : '';
 
   return (
@@ -225,6 +226,7 @@ function buildPopupHtml(point, session) {
       '<div class="chips">' +
         '<span class="chip' + (fachadaYes ? ' yes' : '') + '">Hidrante de fachada: ' + (fachadaYes ? 'SIM' : 'NÃO') + '</span>' +
         '<span class="chip' + (recalqueYes ? ' yes' : '') + '">Hidrante de recalque: ' + (recalqueYes ? 'SIM' : 'NÃO') + '</span>' +
+        '<span class="chip' + (publicoYes ? ' yes' : '') + '">Hidrante público: ' + (publicoYes ? 'SIM' : 'NÃO') + '</span>' +
         '<span class="chip' + (caldeiraYes ? ' yes' : '') + '">Caldeira: ' + (caldeiraYes ? 'SIM' : 'NÃO') + '</span>' +
         '<span class="chip' + (avcb.valido ? ' yes' : '') + '">AVCB: ' + escapeHtml(avcb.label) + '</span>' +
       '</div>' +
@@ -242,6 +244,7 @@ function normalizePoint(raw) {
     capacidade_litros: raw.capacidade_litros || 0,
     hidrante_fachada: raw.hidrante_fachada === 'SIM' ? 'SIM' : 'NAO',
     hidrante_recalque: raw.hidrante_recalque === 'SIM' ? 'SIM' : 'NAO',
+    hidrante_publico: raw.hidrante_publico === 'SIM' ? 'SIM' : 'NAO',
     endereco: raw.endereco || '',
     rua: raw.rua || '',
     numero: raw.numero || '',
@@ -354,7 +357,7 @@ function saveLocalPoint(point) {
 function updateLocalPoint(id, novosDados) {
   const points = getLocalPoints();
   const idx = points.findIndex(function (p) { return p.id === id; });
-  if (idx === -1) return Promise.reject(new Error('SCI não encontrado.'));
+  if (idx === -1) return Promise.reject(new Error('OCI não encontrado.'));
   points[idx] = Object.assign({}, points[idx], novosDados, { id: id });
   setLocalPoints(points);
   return Promise.resolve(points[idx]);
@@ -436,7 +439,27 @@ function startApp() {
   document.getElementById('btn-back-main').href = CATSERTAO_URL;
 
   wireCadastroModal();
-  wireListagemModal();
+  wireBotaoListar();
+  abrirEdicaoViaQueryParam();
+}
+
+// listar.html manda o admin/admin_master de volta para cá com "?editar=<id>"
+// ao clicar em "Editar" na listagem — abre direto o modal de edição desse
+// OCI (mesmo fluxo de abrirModalEdicaoPorId, já usado pelo popup do marcador).
+function abrirEdicaoViaQueryParam() {
+  const id = new URLSearchParams(window.location.search).get('editar');
+  if (!id) return;
+
+  function tentar() {
+    const session = getSession();
+    if (!session) {
+      abrirPopupLogin(tentar);
+      return;
+    }
+    if (!podeEditar(session)) return;
+    abrirModalEdicaoPorId(id);
+  }
+  tentar();
 }
 
 // ===================== Modal de cadastro / edição =====================
@@ -579,6 +602,7 @@ function wireCadastroModal() {
     document.getElementById('input-capacidade').value = point.capacidade_litros || '';
     document.getElementById('check-fachada').checked = point.hidrante_fachada === 'SIM';
     document.getElementById('check-recalque').checked = point.hidrante_recalque === 'SIM';
+    document.getElementById('check-publico').checked = point.hidrante_publico === 'SIM';
     document.getElementById('check-caldeira').checked = point.possui_caldeira === 'SIM';
     checkAvcb.checked = point.possui_avcb === 'SIM';
     toggleCampoDataAvcb();
@@ -610,7 +634,7 @@ function wireCadastroModal() {
     hide(campoDataAvcb); // form.reset() não dispara 'change', então esconde manualmente
 
     editingId = pointToEdit ? pointToEdit.id : null;
-    modalTitulo.textContent = editingId ? 'Editar SCI' : 'Cadastrar SCI';
+    modalTitulo.textContent = editingId ? 'Editar OCI' : 'Cadastrar OCI';
     btnSalvar.textContent = editingId ? 'Salvar edição' : 'Salvar cadastro';
 
     show(overlay);
@@ -666,7 +690,7 @@ function wireCadastroModal() {
     }
     if (!currentCapture || typeof currentCapture.lat !== 'number') {
       formError.textContent = locMode === 'manual'
-        ? 'Toque no mapa para marcar a localização do SCI.'
+        ? 'Toque no mapa para marcar a localização do OCI.'
         : 'Não foi possível obter sua localização. Toque em "Atualizar localização" e tente novamente.';
       show(formError);
       return;
@@ -727,6 +751,7 @@ function wireCadastroModal() {
       capacidade_litros: Number(capacidade),
       hidrante_fachada: document.getElementById('check-fachada').checked ? 'SIM' : 'NAO',
       hidrante_recalque: document.getElementById('check-recalque').checked ? 'SIM' : 'NAO',
+      hidrante_publico: document.getElementById('check-publico').checked ? 'SIM' : 'NAO',
       possui_caldeira: document.getElementById('check-caldeira').checked ? 'SIM' : 'NAO',
       rua: rua,
       numero: numero,
@@ -782,88 +807,23 @@ function abrirModalEdicaoPorId(id) {
 }
 function abrirModalEdicao(id) { abrirModalEdicaoPorId(id); }
 
-// ===================== Modal de listagem =====================
-function wireListagemModal() {
-  const overlay = document.getElementById('modal-listar-overlay');
-  const status = document.getElementById('listar-status');
-  const tabela = document.getElementById('tabela-rtis');
-
-  function fmtAvcbResumo(point) {
-    return getAvcbStatus(point).label;
-  }
-
-  function renderTabela(points, session) {
-    if (points.length === 0) {
-      hide(tabela);
-      status.textContent = 'Nenhum SCI cadastrado ainda.';
-      show(status);
-      return;
-    }
-    hide(status);
-
-    const mostraEditar = podeEditar(session);
-    const thead = '<thead><tr>' +
-      '<th>Nome</th><th>Endereço</th><th>Capacidade</th><th>AVCB</th><th>Cadastrado por</th>' +
-      (mostraEditar ? '<th></th>' : '') +
-      '</tr></thead>';
-
-    const tbody = '<tbody>' + points.map(function (p) {
-      return '<tr>' +
-        '<td class="td-nome" title="' + escapeHtml(p.nome) + '">' + escapeHtml(p.nome) + '</td>' +
-        '<td class="td-endereco" title="' + escapeHtml(enderecoDisplay(p)) + '">' + escapeHtml(enderecoDisplay(p)) + '</td>' +
-        '<td>' + escapeHtml(p.capacidade_litros) + ' L</td>' +
-        '<td>' + escapeHtml(fmtAvcbResumo(p)) + '</td>' +
-        '<td class="td-cadastrado" title="' + escapeHtml(p.cadastrado_por || '—') + '">' + escapeHtml(p.cadastrado_por || '—') + '</td>' +
-        (mostraEditar ? '<td><button type="button" class="btn-outline-navy btn-sm btn-tabela-editar" data-id="' + escapeHtml(p.id) + '">Editar</button></td>' : '') +
-        '</tr>';
-    }).join('') + '</tbody>';
-
-    tabela.innerHTML = thead + tbody;
-    show(tabela);
-
-    if (mostraEditar) {
-      tabela.querySelectorAll('.btn-tabela-editar').forEach(function (btn) {
-        btn.addEventListener('click', function () {
-          const ponto = points.find(function (p) { return p.id === btn.dataset.id; });
-          if (ponto) {
-            hide(overlay);
-            window.abrirModalEdicaoComPonto(ponto);
-          }
-        });
-      });
-    }
-  }
-
-  function openModal() {
+// ===================== Botão "Listar OCI" (abre listar.html em nova aba) =====================
+// A listagem com filtro/distância vive em listar.html, página separada — ela
+// lê a mesma sessão do localStorage (mesma origem aquinogr89.github.io), então
+// não precisa repassar token nenhum pela URL. Aqui só garante que o usuário
+// já está logado (com o mesmo popup de login das outras ações) antes de abrir
+// a nova aba, pra ela já carregar com sessão pronta.
+function wireBotaoListar() {
+  document.getElementById('btn-listar').addEventListener('click', function () {
     const session = getSession();
     if (!session) {
-      abrirPopupLogin(function () { openModal(); });
+      abrirPopupLogin(function () { window.open('listar.html', '_blank'); });
       return;
     }
     if (!podeCadastrar(session)) {
       window.location.href = CATSERTAO_URL;
       return;
     }
-    show(overlay);
-    hide(tabela);
-    status.textContent = 'Carregando...';
-    show(status);
-
-    listarRTIsRemoto(session.token).then(function (res) {
-      if (!res.ok) {
-        status.textContent = res.error || 'Não foi possível carregar a lista agora.';
-        return;
-      }
-      const points = (res.points || []).map(normalizePoint);
-      renderTabela(points, session);
-    }).catch(function () {
-      status.textContent = 'Não foi possível conectar ao servidor agora.';
-    });
-  }
-
-  function closeModal() { hide(overlay); }
-
-  document.getElementById('btn-listar').addEventListener('click', openModal);
-  document.getElementById('modal-listar-close').addEventListener('click', closeModal);
-  overlay.addEventListener('click', function (e) { if (e.target === overlay) closeModal(); });
+    window.open('listar.html', '_blank');
+  });
 }

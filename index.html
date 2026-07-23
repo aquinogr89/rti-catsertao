@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
-<title>Mapa de Sistema de Combate a Incêndio — CAT Sertão</title>
-<meta name="description" content="Mapa de Sistema de Combate a Incêndio (SCI) — reserva técnica de incêndio (RTI), hidrantes, AVCB e caldeira — CAT Sertão, Corpo de Bombeiros Militar de Pernambuco.">
+<title>Mapa de Ocupações de Combate a Incêndio — CAT Sertão</title>
+<meta name="description" content="Mapa de Ocupações de Combate a Incêndio (OCI) — reserva técnica de incêndio (RTI), hidrantes, AVCB e caldeira — CAT Sertão, Corpo de Bombeiros Militar de Pernambuco.">
 <meta name="theme-color" content="#14204A">
 <link rel="icon" type="image/png" href="CAT-SERTAO-SEM-FUNDO.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -20,8 +20,8 @@
     <div class="top-logo"><img src="CAT-SERTAO-SEM-FUNDO.png" alt="Brasão do CAT Sertão"></div>
     <div style="min-width:0;">
       <div class="top-org">CAT Sertão · CBMPE</div>
-      <h1 class="top-title">Mapa de SCI</h1>
-      <div class="top-sub">Sistema de Combate a Incêndio</div>
+      <h1 class="top-title">Mapa de OCI</h1>
+      <div class="top-sub">Ocupações de Combate a Incêndio</div>
     </div>
   </div>
 </header>
@@ -40,8 +40,8 @@
   <a id="btn-back-main" class="btn-back-main" href="#" title="Voltar ao site principal" aria-label="Voltar ao site principal">←</a>
 
   <div class="fab-row">
-    <button id="btn-listar" class="btn-fab btn-fab-outline" type="button">📋 Listar SCIs</button>
-    <button id="btn-cadastrar" class="btn-fab" type="button">+ Cadastrar SCI</button>
+    <button id="btn-listar" class="btn-fab btn-fab-outline" type="button">📋 Listar OCI</button>
+    <button id="btn-cadastrar" class="btn-fab" type="button">+ Cadastrar OCI</button>
   </div>
 </main>
 
@@ -59,7 +59,7 @@
 <div id="modal-overlay" class="modal-overlay u-hidden">
   <div class="modal-card">
     <div class="modal-head">
-      <h2 id="modal-titulo">Cadastrar SCI</h2>
+      <h2 id="modal-titulo">Cadastrar OCI</h2>
       <button id="modal-close" class="modal-close" type="button" aria-label="Fechar">&times;</button>
     </div>
 
@@ -79,7 +79,7 @@
         </div>
 
         <div id="loc-manual-box" class="u-hidden">
-          <p class="q-hint">Toque no mapa para marcar o ponto exato do SCI. Você pode arrastar o marcador para ajustar.</p>
+          <p class="q-hint">Toque no mapa para marcar o ponto exato do OCI. Você pode arrastar o marcador para ajustar.</p>
           <div id="mini-map"></div>
           <div class="loc-box" style="margin-top:8px;">
             <div class="coords"><span>Lat:</span> <span id="loc-lat-manual">—</span> &nbsp; <span>Long:</span> <span id="loc-lng-manual">—</span></div>
@@ -117,6 +117,7 @@
         Hidrantes
         <label class="checkbox-row"><input id="check-fachada" type="checkbox"> Hidrante de fachada (parede)</label>
         <label class="checkbox-row"><input id="check-recalque" type="checkbox"> Hidrante de recalque (calçada)</label>
+        <label class="checkbox-row"><input id="check-publico" type="checkbox"> Hidrante público</label>
       </div>
 
       <div class="field">
@@ -148,20 +149,6 @@
 
       <button id="btn-salvar" class="btn-red" type="submit">Salvar cadastro</button>
     </form>
-  </div>
-</div>
-
-<!-- ===== Modal de listagem ===== -->
-<div id="modal-listar-overlay" class="modal-overlay u-hidden">
-  <div class="modal-card modal-card-wide">
-    <div class="modal-head">
-      <h2>SCIs cadastrados</h2>
-      <button id="modal-listar-close" class="modal-close" type="button" aria-label="Fechar">&times;</button>
-    </div>
-    <p id="listar-status" class="q-hint">Carregando...</p>
-    <div class="table-wrap">
-      <table id="tabela-rtis" class="rti-table u-hidden"></table>
-    </div>
   </div>
 </div>
 

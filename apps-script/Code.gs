@@ -1,7 +1,7 @@
 /**
- * Backend do Mapa de SCI (CAT Sertão) — Google Apps Script.
+ * Backend do Mapa de OCI (CAT Sertão) — Google Apps Script.
  * Implante como Web App (Executar como: Eu / Quem tem acesso: Qualquer pessoa)
- * e cole a URL /exec gerada em SHEETS_API_URL (sci-catsertao/app.js) e em
+ * e cole a URL /exec gerada em SHEETS_API_URL (oci-catsertao/app.js) e em
  * APPS_SCRIPT_URL (catsertao/index.html) — os dois sites usam o MESMO backend.
  *
  * Autenticação, usuários e auditoria estão em Auth.gs, no mesmo projeto.
@@ -20,7 +20,10 @@ var RTI_HEADERS = [
   'id', 'rua', 'numero', 'bairro', 'cidade',
   // Campo Caldeira: mesmo padrão dos anteriores, adicionado no final para
   // não reordenar planilhas já em produção.
-  'possui_caldeira'
+  'possui_caldeira',
+  // Hidrante público: mesmo padrão dos outros hidrantes (fachada/recalque),
+  // adicionado no final por causa da mesma migração automática de colunas.
+  'hidrante_publico'
 ];
 
 // Quem pode cadastrar/listar RTI. Editar é mais restrito (ver handleEditarRTI_).
@@ -189,6 +192,7 @@ function validarDadosRTI_(body) {
     lat: lat, lng: lng, nome: nome, capacidade: capacidade,
     hidranteFachada: body.hidrante_fachada === 'SIM' ? 'SIM' : 'NAO',
     hidranteRecalque: body.hidrante_recalque === 'SIM' ? 'SIM' : 'NAO',
+    hidrantePublico: body.hidrante_publico === 'SIM' ? 'SIM' : 'NAO',
     possuiCaldeira: body.possui_caldeira === 'SIM' ? 'SIM' : 'NAO',
     rua: rua, numero: numero, bairro: bairro, cidade: cidade,
     endereco: rua + ', ' + numero + ' - ' + bairro + ', ' + cidade,
@@ -213,14 +217,14 @@ function handleCadastrarRTI_(body) {
     d.possuiAvcb, d.dataValidadeAvcb, d.pavimentos, d.area, d.altura,
     sessao.login,
     id, d.rua, d.numero, d.bairro, d.cidade,
-    d.possuiCaldeira
+    d.possuiCaldeira, d.hidrantePublico
   ]);
 
   registrarLog_(sessao.login, sessao.perfil, 'cadastro_rti', d.nome + ' (' + d.capacidade + ' L)');
   return { ok: true, id: id };
 }
 
-// Lista todos os SCIs cadastrados, incluindo quem cadastrou cada um — ao
+// Lista todos os OCIs cadastrados, incluindo quem cadastrou cada um — ao
 // contrário do doGet (mapa público), que omite "cadastrado_por". Mesmos
 // perfis que podem cadastrar (admin_master, admin, user1) podem consultar
 // essa listagem; a edição em si é restrita a admin_master/admin (ver abaixo).
@@ -290,6 +294,7 @@ function handleEditarRTI_(body) {
       case 'capacidade_litros': return d.capacidade;
       case 'hidrante_fachada': return d.hidranteFachada;
       case 'hidrante_recalque': return d.hidranteRecalque;
+      case 'hidrante_publico': return d.hidrantePublico;
       case 'endereco': return d.endereco;
       case 'rua': return d.rua;
       case 'numero': return d.numero;
