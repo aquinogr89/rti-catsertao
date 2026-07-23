@@ -433,6 +433,14 @@ function formatarCelula_(value) {
   return value;
 }
 
+// Limites de página aceitos pelo front-end (log.html) — qualquer outro valor
+// (ausente, inválido, ou um número fora dessa lista) cai no padrão de 10.
+// Limitar aqui, no servidor, é o que realmente evita sobrecarregar a página:
+// só as N linhas mais recentes (já filtradas) chegam a trafegar e a serem
+// desenhadas na tabela, mesmo que o LOG tenha milhares de registros.
+var LOG_LIMITES_PERMITIDOS = [10, 50, 100];
+var LOG_LIMITE_PADRAO = 10;
+
 function handleListarLog_(body) {
   var sessao = exigirSessao_(body.token, ['admin_master']);
   if (sessao.erro) return { ok: false, error: sessao.erro };
@@ -441,18 +449,29 @@ function handleListarLog_(body) {
   var acaoFiltro = body.acao || '';
   var dataInicio = body.dataInicio ? new Date(body.dataInicio) : null;
   var dataFim = body.dataFim ? new Date(body.dataFim) : null;
+  var buscaFiltro = String(body.busca || '').trim().toLowerCase();
+
+  var limite = Number(body.limite);
+  if (LOG_LIMITES_PERMITIDOS.indexOf(limite) === -1) limite = LOG_LIMITE_PADRAO;
 
   var filtrado = rows.filter(function (r) {
     if (acaoFiltro && r.acao !== acaoFiltro) return false;
     var ts = new Date(r.timestamp);
     if (dataInicio && ts < dataInicio) return false;
     if (dataFim && ts > dataFim) return false;
+    if (buscaFiltro) {
+      var alvo = [r.login, r.perfil, r.acao, r.detalhe].join(' ').toLowerCase();
+      if (alvo.indexOf(buscaFiltro) === -1) return false;
+    }
     return true;
   }).map(function (r) {
     return { timestamp: r.timestamp, login: r.login, perfil: r.perfil, acao: r.acao, detalhe: r.detalhe };
   }).reverse(); // mais recentes primeiro
 
-  return { ok: true, log: filtrado };
+  var total = filtrado.length;
+  var pagina = filtrado.slice(0, limite);
+
+  return { ok: true, log: pagina, total: total, limite: limite };
 }
 
 /**
