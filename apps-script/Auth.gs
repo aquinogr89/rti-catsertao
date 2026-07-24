@@ -413,12 +413,18 @@ function handleObterTermo_(body) {
 
   if (values.length >= 2) {
     var headers = values[0].map(String);
+    // "_row" é a linha real na planilha (1-based, +1 pelo cabeçalho) — vai
+    // junto na resposta só para o front-end poder identificar qual linha
+    // gravar de volta ao editar (handleEditarTermo_), nunca é mostrado na
+    // tabela (renderTableGeneric, no index.html, filtra essa chave).
     rows = values.slice(1)
-      .filter(function (row) { return row.some(function (cell) { return cell !== '' && cell !== null; }); })
-      .map(function (row) {
-        var record = {};
-        headers.forEach(function (h, i) { record[h] = formatarCelula_(row[i]); });
+      .map(function (row, idx) {
+        var record = { _row: idx + 2 };
+        headers.forEach(function (h, i) { record[h] = formatarCelula_(row[i], h); });
         return record;
+      })
+      .filter(function (record) {
+        return headers.some(function (h) { return record[h] !== '' && record[h] !== null; });
       });
   }
 
@@ -426,11 +432,85 @@ function handleObterTermo_(body) {
   return { ok: true, rows: rows };
 }
 
-function formatarCelula_(value) {
+// Edição do Termo de Compromisso: mesma permissão de handleObterTermo_
+// (admin_master/admin). Como a planilha vem das respostas de um formulário
+// externo (n8n) cujas colunas podem mudar com o tempo, a edição é genérica —
+// grava qualquer coluna informada que exista de fato no cabeçalho atual da
+// planilha, e ignora silenciosamente qualquer chave que não seja mais uma
+// coluna válida (protege contra um payload desatualizado no front-end
+// escrever fora do cabeçalho).
+function handleEditarTermo_(body) {
+  var sessao = exigirSessao_(body.token, ['admin_master', 'admin']);
+  if (sessao.erro) return { ok: false, error: sessao.erro };
+
+  var linha = Number(body.linha);
+  var dados = body.dados || {};
+  if (!linha || linha < 2) return { ok: false, error: 'Registro inválido.' };
+
+  var ss = SpreadsheetApp.openById(TERMO_SHEET_ID);
+  var sheet = TERMO_SHEET_NAME ? ss.getSheetByName(TERMO_SHEET_NAME) : ss.getSheets()[0];
+
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    if (linha > sheet.getLastRow()) {
+      return { ok: false, error: 'Registro não encontrado — pode já ter sido removido ou alterado na planilha.' };
+    }
+    var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0].map(String);
+    Object.keys(dados).forEach(function (header) {
+      var col = headers.indexOf(header);
+      if (col === -1) return;
+      var celula = sheet.getRange(linha, col + 1);
+      celula.setValue(converterValorEdicaoTermo_(celula.getValue(), dados[header]));
+    });
+  } finally {
+    lock.releaseLock();
+  }
+
+  registrarLog_(sessao.login, sessao.perfil, 'edicao_termo', 'editou o registro da linha ' + linha);
+  return { ok: true };
+}
+
+// Preserva o tipo original da célula (Data ou Número) ao gravar o texto que
+// veio do formulário de edição — sem isso, toda edição viraria texto puro e
+// a formatação de data (formatarCelula_) pararia de funcionar nessa célula
+// nas próximas consultas.
+function converterValorEdicaoTermo_(valorAtual, novoTexto) {
+  var texto = String(novoTexto == null ? '' : novoTexto).trim();
+  if (Object.prototype.toString.call(valorAtual) === '[object Date]') {
+    var data = parseDataBr_(texto);
+    return data || texto;
+  }
+  if (typeof valorAtual === 'number' && texto !== '' && !isNaN(Number(texto.replace(',', '.')))) {
+    return Number(texto.replace(',', '.'));
+  }
+  return texto;
+}
+
+// Aceita "dd/MM/yyyy" ou "dd/MM/yyyy HH:mm" — mesmo formato que
+// formatarCelula_ usa para mostrar a data, que é o que o campo de edição
+// mostra pré-preenchido.
+function parseDataBr_(texto) {
+  var m = texto.match(/^(\d{2})\/(\d{2})\/(\d{4})(?:\s+(\d{2}):(\d{2}))?$/);
+  if (!m) return null;
+  var data = new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1]), Number(m[4] || 0), Number(m[5] || 0));
+  return isNaN(data.getTime()) ? null : data;
+}
+
+// Datas são gravadas na planilha com hora (Carimbo de data/hora do
+// formulário etc.), mas a coluna "...em vigor até..." representa só um
+// prazo/validade — mostrar "23:59" ali não faz sentido para quem preenche o
+// termo, então essa coluna (por nome, sem acento/maiúsculas) some com a hora.
+function formatarCelula_(value, header) {
   if (Object.prototype.toString.call(value) === '[object Date]') {
-    return Utilities.formatDate(value, 'GMT-3', 'dd/MM/yyyy HH:mm');
+    var somenteData = textoNormalizado_(header).indexOf('vigor') !== -1;
+    return Utilities.formatDate(value, 'GMT-3', somenteData ? 'dd/MM/yyyy' : 'dd/MM/yyyy HH:mm');
   }
   return value;
+}
+
+function textoNormalizado_(s) {
+  return String(s || '').normalize('NFD').replace(new RegExp('[̀-ͯ]', 'g'), '').toLowerCase();
 }
 
 // Limites de página aceitos pelo front-end (log.html) — qualquer outro valor
