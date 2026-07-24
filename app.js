@@ -19,6 +19,10 @@ const CATSERTAO_URL = isLocalhost ? 'http://localhost:5500/' : 'https://aquinogr
 const CAT_SESSION_KEY = 'cat_session';
 const RTI_ALLOWED_PROFILES = ['admin_master', 'admin', 'user1'];
 const RTI_EDIT_PROFILES = ['admin_master', 'admin'];
+// Vistoriador (user1) e Acesso Básico (user2) podem ver e filtrar a listagem
+// de OCI, mesmo sem poder cadastrar/editar — por isso é uma lista de perfis
+// separada de RTI_ALLOWED_PROFILES (cadastro).
+const RTI_VIEW_PROFILES = ['admin_master', 'admin', 'user1', 'user2'];
 
 let mapAdapter = null;
 let currentCapture = null; // { lat, lng, rua, numero, bairro, cidade }
@@ -42,6 +46,10 @@ function podeCadastrar(session) {
 
 function podeEditar(session) {
   return !!session && RTI_EDIT_PROFILES.indexOf(session.perfil) !== -1;
+}
+
+function podeVisualizarLista(session) {
+  return !!session && RTI_VIEW_PROFILES.indexOf(session.perfil) !== -1;
 }
 
 // ===================== Login sem sair da página =====================
@@ -441,6 +449,11 @@ function startApp() {
   wireCadastroModal();
   wireBotaoListar();
   abrirEdicaoViaQueryParam();
+
+  atualizarVisibilidadeBotaoCadastrar();
+  window.addEventListener('storage', function (e) {
+    if (e.key === CAT_SESSION_KEY) atualizarVisibilidadeBotaoCadastrar();
+  });
 }
 
 // listar.html manda o admin/admin_master de volta para cá com "?editar=<id>"
@@ -820,10 +833,19 @@ function wireBotaoListar() {
       abrirPopupLogin(function () { window.open('listar.html', '_blank'); });
       return;
     }
-    if (!podeCadastrar(session)) {
+    if (!podeVisualizarLista(session)) {
       window.location.href = CATSERTAO_URL;
       return;
     }
     window.open('listar.html', '_blank');
   });
+}
+
+// "+ Cadastrar OCI" só aparece para quem pode cadastrar (admin_master, admin,
+// user1) — Acesso Básico (user2) e visitantes sem sessão nunca veem o botão.
+// Reavaliado também ao voltar de um login feito em popup (evento "storage"),
+// para o botão aparecer sem precisar recarregar a página.
+function atualizarVisibilidadeBotaoCadastrar() {
+  const btn = document.getElementById('btn-cadastrar');
+  if (podeCadastrar(getSession())) show(btn); else hide(btn);
 }

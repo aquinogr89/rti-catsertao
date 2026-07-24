@@ -26,8 +26,11 @@ var RTI_HEADERS = [
   'hidrante_publico'
 ];
 
-// Quem pode cadastrar/listar RTI. Editar é mais restrito (ver handleEditarRTI_).
+// Quem pode cadastrar RTI. Ver a listagem (handleListarRTIs_) é mais aberto —
+// inclui também user2 (ver RTI_PERFIS_VISUALIZACAO). Editar é mais restrito
+// (ver handleEditarRTI_).
 var RTI_PERFIS_CADASTRO = ['admin_master', 'admin', 'user1'];
+var RTI_PERFIS_VISUALIZACAO = ['admin_master', 'admin', 'user1', 'user2'];
 var RTI_PERFIS_EDICAO = ['admin_master', 'admin'];
 
 function rtiSheet_() {
@@ -226,11 +229,12 @@ function handleCadastrarRTI_(body) {
 }
 
 // Lista todos os OCIs cadastrados, incluindo quem cadastrou cada um — ao
-// contrário do doGet (mapa público), que omite "cadastrado_por". Mesmos
-// perfis que podem cadastrar (admin_master, admin, user1) podem consultar
-// essa listagem; a edição em si é restrita a admin_master/admin (ver abaixo).
+// contrário do doGet (mapa público), que omite "cadastrado_por". Qualquer
+// perfil logado (inclusive user2/Acesso Básico) pode consultar essa
+// listagem, mesmo sem poder cadastrar; a edição em si é restrita a
+// admin_master/admin (ver abaixo).
 function handleListarRTIs_(body) {
-  var sessao = exigirSessao_(body.token, RTI_PERFIS_CADASTRO);
+  var sessao = exigirSessao_(body.token, RTI_PERFIS_VISUALIZACAO);
   if (sessao.erro) return { ok: false, error: sessao.erro };
 
   var sheet = rtiSheet_();

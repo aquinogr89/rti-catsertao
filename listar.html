@@ -253,7 +253,7 @@
       mostrarNegado('Você precisa estar logado para ver a listagem de OCI. Faça login no mapa e abra "Listar OCI" novamente.');
       return;
     }
-    if (!podeCadastrar(session)) {
+    if (!podeVisualizarLista(session)) {
       window.location.href = CATSERTAO_URL;
       return;
     }
