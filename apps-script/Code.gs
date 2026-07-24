@@ -130,6 +130,7 @@ function doPost(e) {
     case 'alterarSenha': return jsonResponse_(handleAlterarSenha_(body));
     case 'obterTermo': return jsonResponse_(handleObterTermo_(body));
     case 'editarTermo': return jsonResponse_(handleEditarTermo_(body));
+    case 'concluirTermo': return jsonResponse_(handleConcluirTermo_(body));
     case 'listarLog': return jsonResponse_(handleListarLog_(body));
     case 'cadastrarRTI': return jsonResponse_(handleCadastrarRTI_(body));
     case 'listarRTIs': return jsonResponse_(handleListarRTIs_(body));

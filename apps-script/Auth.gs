@@ -457,9 +457,15 @@ function handleEditarTermo_(body) {
       return { ok: false, error: 'Registro não encontrado — pode já ter sido removido ou alterado na planilha.' };
     }
     var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0].map(String);
+    var colSituacao = encontrarColunaSituacaoTermo_(headers);
     Object.keys(dados).forEach(function (header) {
       var col = headers.indexOf(header);
       if (col === -1) return;
+      // Situação é preenchida automaticamente pelo workflow do n8n — nunca
+      // gravada por aqui, nem que um payload desatualizado tente mandá-la
+      // (a edição, no front-end, já nem mostra esse campo). Para concluir o
+      // termo manualmente, ver handleConcluirTermo_.
+      if (col === colSituacao) return;
       var celula = sheet.getRange(linha, col + 1);
       celula.setValue(converterValorEdicaoTermo_(celula.getValue(), dados[header]));
     });
@@ -469,6 +475,47 @@ function handleEditarTermo_(body) {
 
   registrarLog_(sessao.login, sessao.perfil, 'edicao_termo', 'editou o registro da linha ' + linha);
   return { ok: true };
+}
+
+// Marca o termo como concluído, gravando "CONCLUÍDO" na mesma coluna de
+// Situação que o workflow do n8n usa — não é um campo próprio do site, então
+// o valor sempre reflete o que estiver na planilha (a mesma fonte usada por
+// obterTermo/edição). Mesma permissão de handleEditarTermo_.
+function handleConcluirTermo_(body) {
+  var sessao = exigirSessao_(body.token, ['admin_master', 'admin']);
+  if (sessao.erro) return { ok: false, error: sessao.erro };
+
+  var linha = Number(body.linha);
+  if (!linha || linha < 2) return { ok: false, error: 'Registro inválido.' };
+
+  var ss = SpreadsheetApp.openById(TERMO_SHEET_ID);
+  var sheet = TERMO_SHEET_NAME ? ss.getSheetByName(TERMO_SHEET_NAME) : ss.getSheets()[0];
+
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    if (linha > sheet.getLastRow()) {
+      return { ok: false, error: 'Registro não encontrado — pode já ter sido removido ou alterado na planilha.' };
+    }
+    var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0].map(String);
+    var colSituacao = encontrarColunaSituacaoTermo_(headers);
+    if (colSituacao === -1) {
+      return { ok: false, error: 'Não foi encontrada a coluna de Situação na planilha do Termo.' };
+    }
+    sheet.getRange(linha, colSituacao + 1).setValue('CONCLUÍDO');
+  } finally {
+    lock.releaseLock();
+  }
+
+  registrarLog_(sessao.login, sessao.perfil, 'conclusao_termo', 'concluiu o registro da linha ' + linha);
+  return { ok: true };
+}
+
+function encontrarColunaSituacaoTermo_(headers) {
+  for (var i = 0; i < headers.length; i++) {
+    if (textoNormalizado_(headers[i]).indexOf('situa') !== -1) return i;
+  }
+  return -1;
 }
 
 // Preserva o tipo original da célula (Data ou Número) ao gravar o texto que
